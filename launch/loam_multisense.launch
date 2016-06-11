@@ -1,0 +1,14 @@
+	<launch>
+
+	<arg name="rviz" default="true" />
+	
+	<node pkg="loam_multisense" type="translateScan_ms" name="translateScan_ms" output="screen"/>
+	<node pkg="loam_multisense" type="scanRegistration_ms" name="scanRegistration_ms" output="screen"/>
+	<node pkg="loam_multisense" type="laserOdometry_ms" name="laserOdometry_ms" output="screen"/>
+	<node pkg="loam_multisense" type="laserMapping_ms" name="laserMapping_ms" output="screen"/>
+	<node pkg="loam_multisense" type="transformMaintenance_ms" name="transformMaintenance_ms" output="screen"/>
+	
+	<group if="$(arg rviz)">
+		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/loam_multisense.rviz"/>
+	</group>
+	</launch>

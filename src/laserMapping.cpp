@@ -15,6 +15,8 @@
 #include <opencv2/highgui/highgui.hpp>
 
 #include <pcl/ros/conversions.h>
+// pcl fromROSMsg() has changed, need to include <pcl_conversions/pcl_conversions.h> header
+#include <pcl_conversions/pcl_conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
