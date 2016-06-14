@@ -48,12 +48,13 @@ sensor_msgs::PointCloud2 laserCloudLast2;
 ros::Publisher* pubLaserCloudExtreCurPointer;
 ros::Publisher* pubLaserCloudLastPointer;
 
-int cloudSortInd[1200];
-int cloudNeighborPicked[1200];
+int cloudSortInd[12000]; // holds the PointCloud points, why 1200?
+int cloudNeighborPicked[12000]; // same as above (but for neighbours?)
+const float TIMEBETWEENSWEEPS = 2; // time between two consecutive sweeps, lower bounded
 
 int imuPointerFront = 0;
 int imuPointerLast = -1;
-const int imuQueLength = 50;
+const int imuQueLength = 100; // The frequency the IMU spins with. 100 for the Husky, 450 for the multisense
 bool imuInited = false;
 
 float imuRollStart, imuPitchStart, imuYawStart;
@@ -145,6 +146,14 @@ void TransformToStartIMU(pcl::PointXYZHSV *p)
   p->z = z5 + imuShiftFromStartZCur;
 }
 
+/*
+ * Calculates the drift
+ * The velocity for the last measurement in X, Y and Z directions
+ * stored in 3 arrays:
+ * imuVeloX
+ * imuVeloY
+ * imuVeloZ
+ */
 void AccumulateIMUShift()
 {
   float roll = imuRoll[imuPointerLast];
@@ -183,64 +192,86 @@ void AccumulateIMUShift()
   }
 }
 
+/**
+ * The message from the point cloud go here.
+ */
 void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 {
+  // ros::Duration(0.5).sleep(); // sleep for 0.5 secs
+  // start of system
   if (!systemInited) {
-    initTime = laserCloudIn2->header.stamp.toSec();
+    initTime = laserCloudIn2->header.stamp.toSec(); // initialize the start of the point cloud
     imuPointerFront = (imuPointerLast + 1) % imuQueLength;
     systemInited = true;
   }
 
-  timeScanLast = timeScanCur;
-  timeScanCur = laserCloudIn2->header.stamp.toSec();
-  timeLasted = timeScanCur - initTime;
-  pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudIn(new pcl::PointCloud<pcl::PointXYZ>());
-  pcl::fromROSMsg(*laserCloudIn2, *laserCloudIn);
+  timeScanLast = timeScanCur; // initially 0
+  timeScanCur = laserCloudIn2->header.stamp.toSec(); // timestamp of measurement
+  timeLasted = timeScanCur - initTime; // first measurement is 0, then record the time from the very first measurements (system init)
+  pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudIn(new pcl::PointCloud<pcl::PointXYZ>()); // PointXYZ - Euclidean xyz coordinates
+  pcl::fromROSMsg(*laserCloudIn2, *laserCloudIn); // convert from PointCloud2 to PointCloud
   int cloudInSize = laserCloudIn->points.size();
 
   int cloudSize = 0;
   pcl::PointXYZHSV laserPointIn;
-  pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloud(new pcl::PointCloud<pcl::PointXYZHSV>());
+  pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloud(new pcl::PointCloud<pcl::PointXYZHSV>()); // PointXYZHSV - xyz with hue saturation and value
+
+  // fill the new pointcloud laserCloud (XYZHSV) with the laserCloudIn (PointCloud2) via the var laserPointIn (PointXYZHSV)
   for (int i = 0; i < cloudInSize; i++) {
+    // adopt the x y z values
     laserPointIn.x = laserCloudIn->points[i].x;
     laserPointIn.y = laserCloudIn->points[i].y;
     laserPointIn.z = laserCloudIn->points[i].z;
-    laserPointIn.h = timeLasted;
-    laserPointIn.v = 0;
+    laserPointIn.h = timeLasted; // hue - time from the initialization of the system
+    laserPointIn.v = 0; // value is always 0?
 
+    // if x, y and z < 0.5
     if (!(fabs(laserPointIn.x) < 0.5 && fabs(laserPointIn.y) < 0.5 && fabs(laserPointIn.z) < 0.5)) {
-      laserCloud->push_back(laserPointIn);
+      laserCloud->push_back(laserPointIn); // push a new point at the end of the container (?) 
       cloudSortInd[cloudSize] = cloudSize;
       cloudNeighborPicked[cloudSize] = 0;
       cloudSize++;
     }
   }
 
+  // ROS_INFO("The size of the cloud points incomming is: %d", cloudInSize);
+
+  // get the first and last laser points
   pcl::PointXYZ laserPointFirst = laserCloudIn->points[0];
   pcl::PointXYZ laserPointLast = laserCloudIn->points[cloudInSize - 1];
 
+  // spherical coordinates
+  // first point range = sqrt(x^2 + y^2 + z^2) 
   float rangeFirst = sqrt(laserPointFirst.x * laserPointFirst.x + laserPointFirst.y * laserPointFirst.y
                  + laserPointFirst.z * laserPointFirst.z);
+  // convert x y z
   laserPointFirst.x /= rangeFirst;
   laserPointFirst.y /= rangeFirst;
   laserPointFirst.z /= rangeFirst;
 
+  // last point range = sqrt(x^2 + y^2 + z^2)
   float rangeLast = sqrt(laserPointLast.x * laserPointLast.x + laserPointLast.y * laserPointLast.y
                  + laserPointLast.z * laserPointLast.z);
   laserPointLast.x /= rangeLast;
   laserPointLast.y /= rangeLast;
   laserPointLast.z /= rangeLast;
 
+  // the angle of the laser
+  // atan2(x,y) - angle b/w two coordinates x, y 
+  // supposedly this is the angle the laseris showing
   float laserAngle = atan2(laserPointLast.x - laserPointFirst.x, laserPointLast.y - laserPointFirst.y);
 
   bool newSweep = false;
-  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > 0.7) {
+  // ROS_INFO("timeLasted: %f, timeStart: %f, timeLasted - timeStart: %f, laserAngle: %f", timeLasted, timeStart, (timeLasted - timeStart), (laserAngle * rad2deg));
+  ROS_INFO("Laser angle: %f, timeLasted: %f", (laserAngle * rad2deg), timeLasted);  
+  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > TIMEBETWEENSWEEPS) {
     laserRotDir *= -1;
     newSweep = true;
+    ROS_WARN("New sweep!! Laser angle: %f", (laserAngle * rad2deg));  
   }
 
   if (newSweep) {
-    timeStart = timeScanLast - initTime;
+    timeStart = timeScanLast - initTime; // compute the starting time of this particular scan
 
     pcl::PointCloud<pcl::PointXYZHSV>::Ptr imuTrans(new pcl::PointCloud<pcl::PointXYZHSV>(4, 1));
     imuTrans->points[0].x = imuPitchStart;
@@ -637,19 +668,28 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
   skipFrameCount++;
 }
 
+/**
+ * Receives the messages from the IMU
+ */
 void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 {
+
+  // get RPY
   double roll, pitch, yaw;
   tf::Quaternion orientation;
   tf::quaternionMsgToTF(imuIn->orientation, orientation);
   tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
+  //ROS_INFO("[imu] roll:%f, pitch:%f, yaw:%f ", yaw,pitch,roll);
 
-  int imuPointerBack = imuPointerLast;
-  imuPointerLast = (imuPointerLast + 1) % imuQueLength;
-  imuTime[imuPointerLast] = imuIn->header.stamp.toSec();
-  double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
+  int imuPointerBack = imuPointerLast; // initially -1
+  imuPointerLast = (imuPointerLast + 1) % imuQueLength; // the array pointer 0 - imuQueueLength (100 in MS case)
+  imuTime[imuPointerLast] = imuIn->header.stamp.toSec(); // the time the imu measurement was taken for each of the imuQueueLength (100) points
+  double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack]; // difference in time between the two imu measurement
 
+  // if the two measurement were taken relatively within 0.1 seconds
   if (timeDiff < 0.1) {
+
+    // conversion b/w different coordinate systems
 
     //imuAccuRoll += timeDiff * imuIn->angular_velocity.x;
     //imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
@@ -666,6 +706,9 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
     //imuAccY[imuPointerLast] = -imuIn->linear_acceleration.z - 9.81;
     //imuAccZ[imuPointerLast] = imuIn->linear_acceleration.x;
 
+    // ROS_INFO("imu changed values | bef: (RPY) %d, %d, %d | AFT : (RPY) %d, %d, %d", roll, pitch, yaw, roll, -pitch, -imuAccuYaw);
+
+    // accumulate the IMU shift based on the data seen
     AccumulateIMUShift();
   }
 }
@@ -678,8 +721,10 @@ int main(int argc, char** argv)
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
                                   ("/sync_scan_cloud_filtered", 2, laserCloudHandler);
 
+  // multisense's imu is at /imu/imu_data
+  // msgs to quaternion not properly normalized from imu/imu_data
   ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
-                           ("/microstrain/imu", 5, imuHandler);
+                           ("/imu/data", 5, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
                                          ("/laser_cloud_extre_cur", 2);
