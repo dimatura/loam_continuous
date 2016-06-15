@@ -17,6 +17,7 @@ class Scan2PointTranslator {
 
         ros::Publisher point_cloud_publisher;
         ros::Subscriber scan_sub;
+        sensor_msgs::PointCloud2 filterCloud(const sensor_msgs::PointCloud2& scanPC);
 };
 
 Scan2PointTranslator::Scan2PointTranslator() {
@@ -25,19 +26,19 @@ Scan2PointTranslator::Scan2PointTranslator() {
 }
 
 void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr &scan ) {
-  try {
-      if(!listener.waitForTransform(
-          scan->header.frame_id,
-          "/base_link",
-          scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment),
-          ros::Duration(1.0))){
-        return;
-      }
-  } catch(tf::TransformException &ex) {
-      ROS_ERROR("%s", ex.what());
-      ros::Duration(1.0).sleep();
-      return;
-  }
+    try {
+        if(!listener.waitForTransform(
+            scan->header.frame_id,
+            "/base_link",
+            scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment),
+            ros::Duration(1.0))) {
+            return;
+        }
+    } catch(tf::TransformException &ex) {
+            ROS_ERROR("%s", ex.what());
+            ros::Duration(1.0).sleep();
+            return;
+    }
      
     sensor_msgs::PointCloud2 cloud;
     lp.transformLaserScanToPointCloud( "/base_link", *scan, cloud, listener);
@@ -45,11 +46,11 @@ void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr 
 }
 
 int main(int argc, char** argv) {
-  ros::init(argc, argv, "translateScan");
+    ros::init(argc, argv, "translateScan");
 
-  Scan2PointTranslator s2pt;
+    Scan2PointTranslator s2pt;
 
-  ros::spin();
+    ros::spin();
 
-  return 0;
+    return 0;
 }
