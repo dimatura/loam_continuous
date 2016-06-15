@@ -43,15 +43,23 @@ bool newLaserCloudLast = false;
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreCur(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreOri(new pcl::PointCloud<pcl::PointXYZHSV>());
-//pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreSel(new pcl::PointCloud<pcl::PointXYZHSV>());
-//pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreUnsel(new pcl::PointCloud<pcl::PointXYZHSV>());
-//pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreProj(new pcl::PointCloud<pcl::PointXYZHSV>());
+
+// debug
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreSel(new pcl::PointCloud<pcl::PointXYZHSV>());
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreUnsel(new pcl::PointCloud<pcl::PointXYZHSV>());
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreProj(new pcl::PointCloud<pcl::PointXYZHSV>());
+
+
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudCornerLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSurfLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudCornerLLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSurfLLast(new pcl::PointCloud<pcl::PointXYZHSV>());
-//pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSel(new pcl::PointCloud<pcl::PointXYZHSV>());
+
+// debug
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSel(new pcl::PointCloud<pcl::PointXYZHSV>());
+
+
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr coeffSel(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeCornerLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeSurfLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
@@ -264,20 +272,26 @@ void PluginIMURotation(float bcx, float bcy, float bcz, float blx, float bly, fl
   acz = atan2(srzcrx / cos(acx), crzcrx / cos(acx));
 }
 
+/**
+ * Handles sweep points both for corners and surface patches
+ */
 void laserCloudExtreCurHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudExtreCur2)
 {
+  // record the first start of the system in initTime
   if (!systemInited) {
     initTime = laserCloudExtreCur2->header.stamp.toSec();
     systemInited = true;
   }
+
   timeLaserCloudExtreCur = laserCloudExtreCur2->header.stamp.toSec();
-  timeLasted = timeLaserCloudExtreCur - initTime;
+  timeLasted = timeLaserCloudExtreCur - initTime; // stores the full duration of the laser cloud from the initial launch
 
   pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreCur3(new pcl::PointCloud<pcl::PointXYZHSV>());
   pcl::fromROSMsg(*laserCloudExtreCur2, *laserCloudExtreCur3);
   int laserCloudExtreCur3Size = laserCloudExtreCur3->points.size();
 
   laserCloudExtreCur->clear();
+  // check the imu values and split the points into imu start value, imu current value, shift from the start and velocity from the start
   for (int i = 0; i < laserCloudExtreCur3Size; i++) {
     if (fabs(laserCloudExtreCur3->points[i].v - 10) < 0.005) {
       imuPitchStartCur = laserCloudExtreCur3->points[i].x;
@@ -296,11 +310,13 @@ void laserCloudExtreCurHandler(const sensor_msgs::PointCloud2ConstPtr& laserClou
       imuVeloFromStartYCur = laserCloudExtreCur3->points[i].y;
       imuVeloFromStartZCur = laserCloudExtreCur3->points[i].z;
     } else {
+      // if it doesn't hold information of the IMU, add it to laserCloudExtreCur pointCloud
       laserCloudExtreCur->push_back(laserCloudExtreCur3->points[i]);
     }
   }
   laserCloudExtreCur3->clear();
 
+  // start the IMU
   if (!imuInited) {
     transformSum[0] += imuPitchStartCur;
     //transformSum[1] += imuYawStartCur;
@@ -309,17 +325,24 @@ void laserCloudExtreCurHandler(const sensor_msgs::PointCloud2ConstPtr& laserClou
     imuInited = true;
   }
 
+  // after the first 4 seconds
   if (timeLasted > 4.0) {
+    // start this param
     newLaserCloudExtreCur = true;
   }
 }
 
+/**
+ * Handles last points of the sweep both for corners and surface patches
+ */
 void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLast2)
 {
+  // start with 0.005 delay
   if (laserCloudLast2->header.stamp.toSec() > timeLaserCloudLast + 0.005) {
-    timeLaserCloudLast = laserCloudLast2->header.stamp.toSec();
-    startTimeLast = startTimeCur;
-    startTimeCur = timeLaserCloudLast - initTime;
+    // record timestamps
+    timeLaserCloudLast = laserCloudLast2->header.stamp.toSec(); // of the last sweep (being this pointCloud's timestamp)
+    startTimeLast = startTimeCur; // the time of the last swipe in lidar's sweep
+    startTimeCur = timeLaserCloudLast - initTime; // the start of the current sweep
 
     pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudPointer = laserCloudCornerLLast;
     laserCloudCornerLLast = laserCloudCornerLast;
@@ -333,34 +356,42 @@ void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLas
     pcl::fromROSMsg(*laserCloudLast2, *laserCloudLast);
     int laserCloudLastSize = laserCloudLast->points.size();
 
+    // determine the surface, corner and extre patches
     laserCloudExtreLast->clear();
     laserCloudCornerLast->clear();
     laserCloudSurfLast->clear();
     for (int i = 0; i < laserCloudLastSize; i++) {
+      // could be either surface or planar point (?)
       if (fabs(laserCloudLast->points[i].v - 2) < 0.005 || fabs(laserCloudLast->points[i].v + 1) < 0.005) {
         laserCloudExtreLast->push_back(laserCloudLast->points[i]);
-      } 
+      }
+      // definitely a corner/edge point 
       if (fabs(laserCloudLast->points[i].v - 2) < 0.005 || fabs(laserCloudLast->points[i].v - 1) < 0.005) {
         laserCloudCornerLast->push_back(laserCloudLast->points[i]);
       } 
+      // definitely a surface/planar point
       if (fabs(laserCloudLast->points[i].v) < 0.005 || fabs(laserCloudLast->points[i].v + 1) < 0.005) {
         laserCloudSurfLast->push_back(laserCloudLast->points[i]);
       }
+      // it's the start of the imu
       if (fabs(laserCloudLast->points[i].v - 10) < 0.005) {
         imuPitchStartLast = laserCloudLast->points[i].x;
         imuYawStartLast = laserCloudLast->points[i].y;
         imuRollStartLast = laserCloudLast->points[i].z;
       }
+      // last measurement of imu
       if (fabs(laserCloudLast->points[i].v - 11) < 0.005) {
         imuPitchLast = laserCloudLast->points[i].x;
         imuYawLast = laserCloudLast->points[i].y;
         imuRollLast = laserCloudLast->points[i].z;
       }
+      // shift from the start of the imu
       if (fabs(laserCloudLast->points[i].v - 12) < 0.005) {
         imuShiftFromStartXLast = laserCloudLast->points[i].x;
         imuShiftFromStartYLast = laserCloudLast->points[i].y;
         imuShiftFromStartZLast = laserCloudLast->points[i].z;
       }
+      // velocity from the start of the imu
       if (fabs(laserCloudLast->points[i].v - 13) < 0.005) {
         imuVeloFromStartXLast = laserCloudLast->points[i].x;
         imuVeloFromStartYLast = laserCloudLast->points[i].y;
@@ -368,6 +399,7 @@ void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLas
       }
     }
 
+    // store the projection in a kdtree
     pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreePointer = kdtreeCornerLLast;
     kdtreeCornerLLast = kdtreeCornerLast;
     kdtreeCornerLast = kdtreePointer;
@@ -378,7 +410,9 @@ void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLas
     kdtreeSurfLast = kdtreePointer;
     kdtreeSurfLast->setInputCloud(laserCloudSurfLast);
 
+    // after 4 seconds from the initial starting time
     if (timeLasted > 4.0) {
+      // start this param as well
       newLaserCloudLast = true;
     }
   }
@@ -389,25 +423,33 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "laserOdometry");
   ros::NodeHandle nh;
 
+  // the rest of the sweep
   ros::Subscriber subLaserCloudExtreCur = nh.subscribe<sensor_msgs::PointCloud2> 
                                           ("/laser_cloud_extre_cur", 2, laserCloudExtreCurHandler);
 
+  // last registration before the new sweep
   ros::Subscriber subLaserCloudLast = nh.subscribe<sensor_msgs::PointCloud2> 
                                       ("/laser_cloud_last", 2, laserCloudLastHandler);
 
   ros::Publisher pubLaserCloudLast2 = nh.advertise<sensor_msgs::PointCloud2> ("/laser_cloud_last_2", 2);
 
-  //ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc1", 1);
 
-  //ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc2", 1);
 
-  //ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc3", 1);
+  // debug
+  ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc1", 1);
 
-  //ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc4", 1);
+  ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc2", 1);
 
-  //ros::Publisher pub5 = nh.advertise<sensor_msgs::PointCloud2> ("/pc5", 1);
+  ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc3", 1);
 
-  //ros::Publisher pub6 = nh.advertise<sensor_msgs::PointCloud2> ("/pc6", 1);
+  ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc4", 1);
+
+  ros::Publisher pub5 = nh.advertise<sensor_msgs::PointCloud2> ("/pc5", 1);
+
+  ros::Publisher pub6 = nh.advertise<sensor_msgs::PointCloud2> ("/pc6", 1);
+
+  
+
 
   ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry> ("/cam_to_init", 5);
   nav_msgs::Odometry laserOdometry;
@@ -435,10 +477,12 @@ int main(int argc, char** argv)
     double startTime, endTime;
     pcl::PointCloud<pcl::PointXYZHSV>::Ptr extrePointsPtr, laserCloudCornerPtr, laserCloudSurfPtr;
     pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeCornerPtr, kdtreeSurfPtr;
+    // if we have received both the extreCur and last and 4 seconds have passed
+    // this is where the reprojection should take place?
     if (newLaserCloudExtreCur && newLaserCloudLast) {
 
-      startTime = startTimeLast;
-      endTime = startTimeCur;
+      startTime = startTimeLast; // time of the last swipe of the lidar
+      endTime = startTimeCur; // until now
 
       extrePointsPtr = laserCloudExtreLast;
       laserCloudCornerPtr = laserCloudCornerLLast;
@@ -452,10 +496,12 @@ int main(int argc, char** argv)
       sweepEnd = true;
       newLaserPoints = true;
 
+      // threshold of 100 points defining whether we have sufficient points to process
       if (laserCloudSurfLLast->points.size() >= 100) {
       	sufficientPoints = true;
       }
 
+    // if only the extreCur pointCloud has been received, i.e. no last one
     } else if (newLaserCloudExtreCur) {
 
       startTime = startTimeCur;
@@ -483,6 +529,7 @@ int main(int argc, char** argv)
       }
     }
 
+    // at this stage we have identified whether we have any new laser points and whether they're enough
     if (newLaserPoints && sufficientPoints) {
       newLaserCloudExtreCur = false;
       newLaserCloudLast = false;
@@ -501,10 +548,17 @@ int main(int argc, char** argv)
       for (int iterCount = 0; iterCount < iterNum; iterCount++) {
 
         laserCloudExtreOri->clear();
-        //laserCloudExtreSel->clear();
-        //laserCloudExtreUnsel->clear();
-        //laserCloudExtreProj->clear();
-        //laserCloudSel->clear();
+
+
+
+        // debug
+        laserCloudExtreSel->clear();
+        laserCloudExtreUnsel->clear();
+        laserCloudExtreProj->clear();
+        laserCloudSel->clear();
+        
+
+
         coeffSel->clear();
 
         bool isPointSel = false;
@@ -640,11 +694,17 @@ int main(int argc, char** argv)
 
               if (s > 0.2 || iterNum < 30) {
                 laserCloudExtreOri->push_back(extreOri);
-                //laserCloudExtreSel->push_back(extreSel);
-                //laserCloudExtreProj->push_back(extreProj);
-                //laserCloudSel->push_back(tripod1);
-                //laserCloudSel->push_back(tripod2);
-                //laserCloudSel->push_back(tripod3);
+
+
+                // debug
+                laserCloudExtreSel->push_back(extreSel);
+                laserCloudExtreProj->push_back(extreProj);
+                laserCloudSel->push_back(tripod1);
+                laserCloudSel->push_back(tripod2);
+                laserCloudSel->push_back(tripod3);
+
+
+
                 coeffSel->push_back(coeff);
 
                 if (isPointSel) {
@@ -653,7 +713,15 @@ int main(int argc, char** argv)
                   pointSelInd[3 * i + 2] = minPointInd3;
                 }
               } else {
-                //laserCloudExtreUnsel->push_back(extreSel);
+
+
+                // debug
+                laserCloudExtreUnsel->push_back(extreSel);
+              
+
+
+
+
               }
             }
           } else if (fabs(extreOri.v - 2) < 0.05) {
@@ -771,10 +839,16 @@ int main(int argc, char** argv)
 
               if (s > 0.4) {
                 laserCloudExtreOri->push_back(extreOri);
-                //laserCloudExtreSel->push_back(extreSel);
-                //laserCloudExtreProj->push_back(extreProj);
-                //laserCloudSel->push_back(tripod1);
-                //laserCloudSel->push_back(tripod2);
+
+
+                // debug
+                laserCloudExtreSel->push_back(extreSel);
+                laserCloudExtreProj->push_back(extreProj);
+                laserCloudSel->push_back(tripod1);
+                laserCloudSel->push_back(tripod2);
+                
+
+
                 coeffSel->push_back(coeff);
 
                 if (isPointSel) {
@@ -782,7 +856,10 @@ int main(int argc, char** argv)
                   pointSelInd[3 * i + 1] = minPointInd2;
                 }
               } else {
-                //laserCloudExtreUnsel->push_back(extreSel);
+
+
+                // debug
+                laserCloudExtreUnsel->push_back(extreSel);
               }
             }
           }
@@ -879,11 +956,21 @@ int main(int argc, char** argv)
           transform[4] += matX.at<float>(4, 0);
           transform[5] += matX.at<float>(5, 0);
         } else {
-          //ROS_INFO ("Odometry update out of bound");
+
+
+
+          // debug
+          ROS_INFO ("Odometry update out of bound");
+
+
+          
         }
       }
 
-      /*sensor_msgs::PointCloud2 pc12;
+
+
+      // debug
+      sensor_msgs::PointCloud2 pc12;
       pcl::toROSMsg(*laserCloudCornerPtr, pc12);
       pc12.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
       pc12.header.frame_id = "/camera";
@@ -917,9 +1004,10 @@ int main(int argc, char** argv)
       pcl::toROSMsg(*laserCloudSel, pc62);
       pc62.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
       pc62.header.frame_id = "/camera";
-      pub6.publish(pc62);*/
+      pub6.publish(pc62);
     }
 
+    // if we have new laser points
     if (newLaserPoints) {
       float rx, ry, rz, tx, ty, tz;
       if (sweepEnd) {

@@ -560,6 +560,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
         
         largestPickedNum++;
         if (largestPickedNum <= 2) {
+          // value of 2 means it's a an edge
           laserCloud->points[cloudSortInd[j]].v = 2;
           cornerPointsSharp->push_back(laserCloud->points[cloudSortInd[j]]);
         } else if (largestPickedNum <= 20) {
@@ -740,7 +741,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
     pubLaserCloudExtreCurPointer->publish(laserCloudExtreCur2);
     imuTrans->clear();
 
-    pubLaserCloudLastPointer->publish(laserCloudLast2);
+    pubLaserCloudLastPointer->publish(laserCloudLast2); // this is tha last registration before the new sweep
 
     // ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
   }
@@ -808,6 +809,7 @@ int main(int argc, char** argv)
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
                                          ("/laser_cloud_extre_cur", 2);
 
+  // last registration before the new sweep
   ros::Publisher pubLaserCloudLast = nh.advertise<sensor_msgs::PointCloud2> 
                                      ("/laser_cloud_last", 2);
   
