@@ -26,6 +26,9 @@ const double PI = 3.1415926;
 const double rad2deg = 180 / PI;
 const double deg2rad = PI / 180;
 
+// ENOUGH POINTS
+const int ENOUGH_POINTS_THRESHOLD = 250;
+
 bool systemInited = false;
 
 double initTime;
@@ -327,7 +330,7 @@ void laserCloudExtreCurHandler(const sensor_msgs::PointCloud2ConstPtr& laserClou
 
   // after the first 4 seconds
   if (timeLasted > 4.0) {
-    // start this param
+    // notify of the new sweep
     newLaserCloudExtreCur = true;
   }
 }
@@ -400,11 +403,14 @@ void laserCloudLastHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudLas
     }
 
     // store the projection in a kdtree
+
+    // for corner (Ek+1)
     pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreePointer = kdtreeCornerLLast;
     kdtreeCornerLLast = kdtreeCornerLast;
     kdtreeCornerLast = kdtreePointer;
     kdtreeCornerLast->setInputCloud(laserCloudCornerLast);
 
+    // and planar patches (Hk+1)
     kdtreePointer = kdtreeSurfLLast;
     kdtreeSurfLLast = kdtreeSurfLast;
     kdtreeSurfLast = kdtreePointer;
@@ -454,12 +460,12 @@ int main(int argc, char** argv)
   ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry> ("/cam_to_init", 5);
   nav_msgs::Odometry laserOdometry;
   laserOdometry.header.frame_id = "/camera_init";
-  laserOdometry.child_frame_id = "/camera";
+  laserOdometry.child_frame_id = "/head";
 
   tf::TransformBroadcaster tfBroadcaster;
   tf::StampedTransform laserOdometryTrans;
   laserOdometryTrans.frame_id_ = "/camera_init";
-  laserOdometryTrans.child_frame_id_ = "/camera";
+  laserOdometryTrans.child_frame_id_ = "/head";
 
   std::vector<int> pointSearchInd;
   std::vector<float> pointSearchSqDis;
@@ -479,6 +485,8 @@ int main(int argc, char** argv)
     pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeCornerPtr, kdtreeSurfPtr;
     // if we have received both the extreCur and last and 4 seconds have passed
     // this is where the reprojection should take place?
+    // if we have received boht the last and the extreCur points - it is the end of the swipe
+    // and we can safely reproject to the new time frame
     if (newLaserCloudExtreCur && newLaserCloudLast) {
 
       startTime = startTimeLast; // time of the last swipe of the lidar
@@ -496,12 +504,13 @@ int main(int argc, char** argv)
       sweepEnd = true;
       newLaserPoints = true;
 
-      // threshold of 100 points defining whether we have sufficient points to process
-      if (laserCloudSurfLLast->points.size() >= 100) {
+      // threshold of ENOUGH_POINTS_THRESHOLD (100 originally) points defining whether we have sufficient points to process
+      if (laserCloudSurfLLast->points.size() >= ENOUGH_POINTS_THRESHOLD) {
       	sufficientPoints = true;
       }
 
     // if only the extreCur pointCloud has been received, i.e. no last one
+    // then it's not the end of the sweep, but we still might have enough points
     } else if (newLaserCloudExtreCur) {
 
       startTime = startTimeCur;
@@ -522,24 +531,29 @@ int main(int argc, char** argv)
       }
       timeLastedRec = timeLasted;
 
+      // we declare we have new laser points
       newLaserPoints = true;
 
-      if (laserCloudSurfLast->points.size() >= 100) {
+      // check if we have enough points
+      if (laserCloudSurfLast->points.size() >= ENOUGH_POINTS_THRESHOLD) {
         sufficientPoints = true;
       }
     }
 
     // at this stage we have identified whether we have any new laser points and whether they're enough
+    // it doesn't matter if the last part of the sweep has been received
     if (newLaserPoints && sufficientPoints) {
       newLaserCloudExtreCur = false;
       newLaserCloudLast = false;
 
-      int extrePointNum = extrePointsPtr->points.size();
+      int extrePointNum = extrePointsPtr->points.size(); // this holds either all the points of the sweep, or just enough points
       int laserCloudCornerNum = laserCloudCornerPtr->points.size();
       int laserCloudSurfNum = laserCloudSurfPtr->points.size();
 
       float st = 1;
+      // if not the end of the sweep
       if (!sweepEnd) {
+        // (time from beginning of the initialization - start time of this sweep) / (how much the algorithm has advanced in this sweep) 
         st = (timeLasted - startTime) / (startTimeCur - startTimeLast);
       }
       int iterNum = st * 50;
@@ -973,37 +987,37 @@ int main(int argc, char** argv)
       sensor_msgs::PointCloud2 pc12;
       pcl::toROSMsg(*laserCloudCornerPtr, pc12);
       pc12.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc12.header.frame_id = "/camera";
+      pc12.header.frame_id = "/head";
       pub1.publish(pc12);
 
       sensor_msgs::PointCloud2 pc22;
       pcl::toROSMsg(*laserCloudSurfPtr, pc22);
       pc22.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc22.header.frame_id = "/camera";
+      pc22.header.frame_id = "/head";
       pub2.publish(pc22);
 
       sensor_msgs::PointCloud2 pc32;
       pcl::toROSMsg(*laserCloudExtreSel, pc32);
       pc32.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc32.header.frame_id = "/camera";
+      pc32.header.frame_id = "/head";
       pub3.publish(pc32);
 
       sensor_msgs::PointCloud2 pc42;
       pcl::toROSMsg(*laserCloudExtreUnsel, pc42);
       pc42.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc42.header.frame_id = "/camera";
+      pc42.header.frame_id = "/head";
       pub4.publish(pc42);
 
       sensor_msgs::PointCloud2 pc52;
       pcl::toROSMsg(*laserCloudExtreProj, pc52);
       pc52.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc52.header.frame_id = "/camera";
+      pc52.header.frame_id = "/head";
       pub5.publish(pc52);
 
       sensor_msgs::PointCloud2 pc62;
       pcl::toROSMsg(*laserCloudSel, pc62);
       pc62.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      pc62.header.frame_id = "/camera";
+      pc62.header.frame_id = "/head";
       pub6.publish(pc62);
     }
 
@@ -1055,7 +1069,7 @@ int main(int argc, char** argv)
         sensor_msgs::PointCloud2 laserCloudLast2;
         pcl::toROSMsg(*laserCloudCornerLast + *laserCloudSurfLast, laserCloudLast2);
         laserCloudLast2.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
-        laserCloudLast2.header.frame_id = "/camera";
+        laserCloudLast2.header.frame_id = "/head";
         pubLaserCloudLast2.publish(laserCloudLast2);
 
       } else {

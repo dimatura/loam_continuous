@@ -1,13 +1,26 @@
-	<launch>
+<launch>
 
 	<arg name="rviz" default="true" />
 	
+	<!-- run some filtering on the laser scan-->
+	<!-- <node pkg="laser_filters" type="scan_to_cloud_filter_chain" name="no_filter"> -->
+		<!-- <rosparam command="load" file="$(find loam_multisense)/filters/my_laser_config.yaml" /> -->
+		<!-- <rosparam command="load" file="$(find mypkg)/my_cloud_config.yaml" /> -->
+		<!-- <param name="high_fidelity" value="false" /> -->
+		<!-- <param name="target_frame" type="string" value="head" /> -->
+		<!-- <remap from="scan" to="lidar_scan" /> -->
+		<!-- <remap from="cloud_filtered" to="sync_scan_cloud_filtered" /> -->
+	<!-- </node> -->
+
+	<!-- The multisense urdf -->
+	<param name="robot_description" textfile="$(find multisense_description)/urdf/multisenseSL.urdf" />
+
 	<node pkg="loam_multisense" type="translateScan_ms" name="translateScan_ms" output="screen"/>
 	<node pkg="loam_multisense" type="scanRegistration_ms" name="scanRegistration_ms" output="screen"/>
 	<node pkg="loam_multisense" type="laserOdometry_ms" name="laserOdometry_ms" output="screen"/>
 	<node pkg="loam_multisense" type="laserMapping_ms" name="laserMapping_ms" output="screen"/>
 	<node pkg="loam_multisense" type="transformMaintenance_ms" name="transformMaintenance_ms" output="screen"/>
 	<group if="$(arg rviz)">
-		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/loam_multisense.rviz"/>
+		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/rviz_2.rviz"/>
 	</group>
-	</launch>
+</launch>
