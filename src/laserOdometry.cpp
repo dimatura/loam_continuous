@@ -21,6 +21,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <std_msgs/Float32.h>
 
 const double PI = 3.1415926;
 const double rad2deg = 180 / PI;
@@ -28,6 +29,11 @@ const double deg2rad = PI / 180;
 
 // ENOUGH POINTS
 const int ENOUGH_POINTS_THRESHOLD = 250;
+const float SURFACE_POINT_CLOSEST_NEIGHBOUR_SQ_DIST_SKIP_THRESHOLD = 1.0;
+const float CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME = 0.07;
+const float CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME = 0.005;
+float mean_iterNum = 0;
+int currIter = 0;
 
 bool systemInited = false;
 
@@ -85,6 +91,9 @@ float imuVeloFromStartXLast = 0, imuVeloFromStartYLast = 0, imuVeloFromStartZLas
 
 bool imuInited = false;
 
+// debug
+std_msgs::Float32 s_param;
+
 void TransformReset()
 {
   for (int i = 0; i < 6; i++) {
@@ -97,8 +106,13 @@ void TransformReset()
   transformRec[5] -= imuVeloFromStartZLast * (startTimeCur - startTimeLast);
 }
 
+/**
+ * Estimate rigid motion of lidar (T_{k+1}^{L})
+ */
 void TransformToStart(pcl::PointXYZHSV *pi, pcl::PointXYZHSV *po, double startTime, double endTime)
 {
+  // pi->h - time from init of system
+
   float s = (pi->h - startTime) / (endTime - startTime);
 
   float rx = s * transform[0];
@@ -454,6 +468,8 @@ int main(int argc, char** argv)
 
   ros::Publisher pub6 = nh.advertise<sensor_msgs::PointCloud2> ("/pc6", 1);
 
+  // debug s parameter
+  ros::Publisher pubSParam = nh.advertise<std_msgs::Float32>("/s_param", 1000);
   
 
 
@@ -467,10 +483,17 @@ int main(int argc, char** argv)
   laserOdometryTrans.frame_id_ = "/camera_init";
   laserOdometryTrans.child_frame_id_ = "/head";
 
-  std::vector<int> pointSearchInd;
-  std::vector<float> pointSearchSqDis;
-  std::vector<int> pointSelInd;
+  std::vector<int> pointSearchInd; // vector holding the indeces of points, closest to the neigbour of i for line edge/surface patch
+  std::vector<float> pointSearchSqDis; // vector holding the square distances of the selected points for line edge/surface patch
+  std::vector<int> pointSelInd; // vector, holding the neighbours for the line edge/surface patch
 
+  // extreOri - original point from point cloud
+  // extreSel - transform T_k+1^L point (interpolation)
+  // extreProj - small offset removed from extreSel
+  // tripod1 - the first point of the surface area patch
+  // tripod2 - the second point of the surface area patch
+  // tripod3 - the third point of the surface area patch
+  // coeff - 
   pcl::PointXYZHSV extreOri, extreSel, extreProj, tripod1, tripod2, tripod3, coeff;
 
   bool status = ros::ok();
@@ -546,22 +569,30 @@ int main(int argc, char** argv)
       newLaserCloudExtreCur = false;
       newLaserCloudLast = false;
 
-      int extrePointNum = extrePointsPtr->points.size(); // this holds either all the points of the sweep, or just enough points
-      int laserCloudCornerNum = laserCloudCornerPtr->points.size();
-      int laserCloudSurfNum = laserCloudSurfPtr->points.size();
+      // the number of corner and surface points combined, from the registration of this current sweep
+      int extrePointNum = extrePointsPtr->points.size(); // this holds either all the points of the sweep (including last), or just enough points
+      int laserCloudCornerNum = laserCloudCornerPtr->points.size(); // the cloud corner points so far!!
+      int laserCloudSurfNum = laserCloudSurfPtr->points.size(); // all the surface points so far 
 
+      //ROS_INFO_STREAM("Extreme points: " << extrePointNum << ", Corner points: " << laserCloudCornerNum << ", Surface points: " << laserCloudSurfNum);
+
+      // initially more often, then with time the iterations are around 50.
       float st = 1;
       // if not the end of the sweep
       if (!sweepEnd) {
         // (time from beginning of the initialization - start time of this sweep) / (how much the algorithm has advanced in this sweep) 
         st = (timeLasted - startTime) / (startTimeCur - startTimeLast);
       }
-      int iterNum = st * 50;
+      int iterNum = st * 50; // denotes how many iterations
+      currIter++;
 
-      int pointSelSkipNum = 2;
+      mean_iterNum = mean_iterNum + ((iterNum-mean_iterNum)/currIter);
+      ROS_INFO_STREAM("Mean iter: " << mean_iterNum);
+
+      int pointSelSkipNum = 2; // number of selected points to skip, basically every 3 point is selected
       for (int iterCount = 0; iterCount < iterNum; iterCount++) {
 
-        laserCloudExtreOri->clear();
+        laserCloudExtreOri->clear(); // empty the original laser cloud
 
 
 
@@ -575,40 +606,69 @@ int main(int argc, char** argv)
 
         coeffSel->clear();
 
+        // check if a point is selected
         bool isPointSel = false;
+        // select every 3 points (depending on pointSelSkipNum)
         if (iterCount % (pointSelSkipNum + 1) == 0) {
           isPointSel = true;
-          pointSelInd.clear();
+          pointSelInd.clear(); // clear the selected indeces if a new point is selected
+          //ROS_INFO_STREAM("iterCount (selected point): " << iterCount);
         }
 
+        // iterate all the new corner and surface points
         for (int i = 0; i < extrePointNum; i++) {
           extreOri = extrePointsPtr->points[i];
+          // interpolate the transformation from the origin to obtain T_{k+1}^{L}
+          // extreOri - original point to be transformed
+          // extreSel - transformed point with correct time, interpolated
           TransformToStart(&extreOri, &extreSel, startTime, endTime);
 
+          // add 3 negative indeces to the selected point index vector
+          // initialization, this is just a placeholder that holds the neighbours for the surface patch
           if (isPointSel) {
             pointSelInd.push_back(-1);
             pointSelInd.push_back(-1);
             pointSelInd.push_back(-1);
           }
 
+          // check if it is a surface point
+          // 3 points needed for association
           if (fabs(extreOri.v + 1) < 0.05) {
 
             int closestPointInd = -1, minPointInd2 = -1, minPointInd3 = -1;
+            // if every 3rd point (or pointSelSkipNum+1) 
             if (isPointSel) {
+              // search for k-nearest neighbours for given query point
+              // query point - extreSel
+              // 1 neighbour to search for
+              // pointSearchInd - vector of indexes of neighbouring points found
+              // pointSearchSqDis - vector of distances to neighbouring points found
               kdtreeSurfPtr->nearestKSearch(extreSel, 1, pointSearchInd, pointSearchSqDis);
-              if (pointSearchSqDis[0] > 1.0) {
+
+              // if the closest neighbour point is too far away - skip it 
+              // usually the sq dist for multisense is 0.0* in a room
+              if (pointSearchSqDis[0] > SURFACE_POINT_CLOSEST_NEIGHBOUR_SQ_DIST_SKIP_THRESHOLD) {
                 continue;
               }
 
+              // save the closest neighbour 
               closestPointInd = pointSearchInd[0];
-              float closestPointTime = laserCloudSurfPtr->points[closestPointInd].h;
+              float closestPointTime = laserCloudSurfPtr->points[closestPointInd].h; // timestamp of the point obtained
 
+              // find 3 points that are closed to the neighbour (denoted j in the paper)
+              // one could set different square distances for each of the next points that they want
+              // here the first point square distance is thresholded at 1 (denoted l in the paper)
+              // the second poit as well. One could destinguish between minPointSqDist2 and minPointSqDist3 based on the time when they're obtained relative to the neighbour
               float pointSqDis, minPointSqDis2 = 1, minPointSqDis3 = 1;
+
+              // iterate the points from the neighbour onwards
               for (int j = closestPointInd + 1; j < laserCloudSurfNum; j++) {
-                if (laserCloudSurfPtr->points[j].h > closestPointTime + 0.07) {
+                // if the time at which the new point is obtained is too late - skip it
+                if (laserCloudSurfPtr->points[j].h > closestPointTime + CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME) {
                   break;
                 }
 
+                // x^2 + y^2 + z^2
                 pointSqDis = (laserCloudSurfPtr->points[j].x - extreSel.x) * 
                              (laserCloudSurfPtr->points[j].x - extreSel.x) + 
                              (laserCloudSurfPtr->points[j].y - extreSel.y) * 
@@ -616,23 +676,31 @@ int main(int argc, char** argv)
                              (laserCloudSurfPtr->points[j].z - extreSel.z) * 
                              (laserCloudSurfPtr->points[j].z - extreSel.z);
 
-                if (laserCloudSurfPtr->points[j].h < closestPointTime + 0.005) {
+                // check the time stamp, if it's very closed to the obtained timestamp of the neighbour
+                // this means we are currenly finding the first point
+                if (laserCloudSurfPtr->points[j].h < closestPointTime + CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME) {
+                   // if wihtin the specified sq distance
                    if (pointSqDis < minPointSqDis2) {
                      minPointSqDis2 = pointSqDis;
                      minPointInd2 = j;
                    }
+                // if not within the specified time frame, collect the point in a separate variable - minPointSqDist3 and minPointInd3
                 } else {
-                   if (pointSqDis < minPointSqDis3) {
-                     minPointSqDis3 = pointSqDis;
-                     minPointInd3 = j;
-                   }
+                    if (pointSqDis < minPointSqDis3) {
+                      minPointSqDis3 = pointSqDis;
+                      minPointInd3 = j;
+                    }
                 }
               }
+
+              // iterate the points from the neighbour backwards ( difference is - time should be backwards)
               for (int j = closestPointInd - 1; j >= 0; j--) {
-                if (laserCloudSurfPtr->points[j].h < closestPointTime - 0.07) {
+                // if the time at which the new point is obtained is too early - skip it
+                if (laserCloudSurfPtr->points[j].h < closestPointTime - CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME) {
                   break;
                 }
 
+                // x^2 + y^2 + z^2
                 pointSqDis = (laserCloudSurfPtr->points[j].x - extreSel.x) * 
                              (laserCloudSurfPtr->points[j].x - extreSel.x) + 
                              (laserCloudSurfPtr->points[j].y - extreSel.y) * 
@@ -640,40 +708,56 @@ int main(int argc, char** argv)
                              (laserCloudSurfPtr->points[j].z - extreSel.z) * 
                              (laserCloudSurfPtr->points[j].z - extreSel.z);
 
-                if (laserCloudSurfPtr->points[j].h > closestPointTime - 0.005) {
-                   if (pointSqDis < minPointSqDis2) {
-                     minPointSqDis2 = pointSqDis;
-                     minPointInd2 = j;
-                   }
+                // check the time stamp, if it's very closed to the obtained timestamp of the neighbour
+                // this means we are currenly finding the first point
+                if (laserCloudSurfPtr->points[j].h > closestPointTime - CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME) {
+                  // if wihtin the specified sq distance
+                  if (pointSqDis < minPointSqDis2) {
+                    // save the point
+                    minPointSqDis2 = pointSqDis;
+                    minPointInd2 = j;
+                  }
+                // if not within the specified time frame, collect the point in a separate variable - minPointSqDist3 and minPointInd3
                 } else {
-                   if (pointSqDis < minPointSqDis3) {
-                     minPointSqDis3 = pointSqDis;
-                     minPointInd3 = j;
-                   }
+                  if (pointSqDis < minPointSqDis3) {
+                    minPointSqDis3 = pointSqDis;
+                    minPointInd3 = j;
+                  }
                 }
               }
+            // if a point is not selected (not every third, but every first and second)
             } else {
+              // check if the indeces are bigger than 0 (initially they were set to -1)
+              // so if we have some change
               if (pointSelInd[3 * i] >= 0) {
+                // adopt the closest point from before
                 closestPointInd = pointSelInd[3 * i];
                 minPointInd2 = pointSelInd[3 * i + 1];
                 minPointInd3 = pointSelInd[3 * i + 2];
 
+                // calculate the distance between the T_k+1^L and the closest point
                 float distX = extreSel.x - laserCloudSurfPtr->points[closestPointInd].x;
                 float distY = extreSel.y - laserCloudSurfPtr->points[closestPointInd].y;
                 float distZ = extreSel.z - laserCloudSurfPtr->points[closestPointInd].z;
+
+                // if the distance is too big - skip this point i.
                 if (distX * distX + distY * distY + distZ * distZ > 1.0) {
                   continue;
                 }
+              // or if the selected point index vector is not changed - skip this point i.
               } else {
                 continue;
               }
             }
 
+            // if we have chosen another 2 points except j, that are closer
             if (minPointInd2 >= 0 && minPointInd3 >= 0) {
+              // retrieve the three points
               tripod1 = laserCloudSurfPtr->points[closestPointInd];
               tripod2 = laserCloudSurfPtr->points[minPointInd2];
               tripod3 = laserCloudSurfPtr->points[minPointInd3];
 
+              // compute the plane equation (pa*x+pb*y+pc*z+pd=0)
               float pa = (tripod2.y - tripod1.y) * (tripod3.z - tripod1.z) 
                        - (tripod3.y - tripod1.y) * (tripod2.z - tripod1.z);
               float pb = (tripod2.z - tripod1.z) * (tripod3.x - tripod1.x) 
@@ -682,31 +766,57 @@ int main(int argc, char** argv)
                        - (tripod3.x - tripod1.x) * (tripod2.y - tripod1.y);
               float pd = -(pa * tripod1.x + pb * tripod1.y + pc * tripod1.z);
 
+              // sqrt(pa^2+pb^2+pc^2)
               float ps = sqrt(pa * pa + pb * pb + pc * pc);
-              pa /= ps;
-              pb /= ps;
-              pc /= ps;
-              pd /= ps;
+              // make sure you 
+              pa /= ps; // normalise by sqrt(pa^2+pb^2+pc^2)
+              pb /= ps; // normalise by sqrt(pa^2+pb^2+pc^2)
+              pc /= ps; // normalise by sqrt(pa^2+pb^2+pc^2)
+              pd /= ps; // normalise by sqrt(pa^2+pb^2+pc^2)
 
+              // for the selected point T_k+1^L - plug in the plane equation
               float pd2 = pa * extreSel.x + pb * extreSel.y + pc * extreSel.z + pd;
 
+              // remove some offset from the extreSel point
               extreProj = extreSel;
               extreProj.x -= pa * pd2;
               extreProj.y -= pb * pd2;
               extreProj.z -= pc * pd2;
 
+              // float debugD = -pd/pc;
+              // float debugA = -pa/pc;
+              // float debugB = -pb/pc;
+              // ROS_INFO_STREAM("@(x,y) " << debugD << "+(" << debugA << ")*x+(" << debugB << ")*y");
+              // ROS_INFO_STREAM("pa="<<pa<<";pb="<<pb<<";pc="<<pc<<";pd="<<pd<<";");
+              // ROS_INFO("extreSel=[%f,%f,%f];", extreSel.x, extreSel.y, extreSel.z);
+              // ROS_INFO("extreProj=[%f,%f,%f];", extreProj.x, extreProj.y, extreProj.z);
+
+
+              // heuristically adapted weight if more than 30 iterations 
               float s = 1;
               if (iterCount >= 30) {
                 s = 1 - 8 * fabs(pd2) / sqrt(sqrt(extreSel.x * extreSel.x
                   + extreSel.y * extreSel.y + extreSel.z * extreSel.z));
               }
 
+              s_param.data = mean_iterNum;
+              pubSParam.publish(s_param);
+
+              // ROS_INFO_STREAM("s: " << s);
+
+              // compute the weighted new:
+              // x - pa
+              // y - pb
+              // z - pc
+              // h - distance from extreSel
               coeff.x = s * pa;
               coeff.y = s * pb;
               coeff.z = s * pc;
               coeff.h = s * pd2;
 
+              // if the weight is bigger than 0.2 and the iterations are less than 30
               if (s > 0.2 || iterNum < 30) {
+                // then the original point is added to laserCloudExtreOri
                 laserCloudExtreOri->push_back(extreOri);
 
 
@@ -721,6 +831,7 @@ int main(int argc, char** argv)
 
                 coeffSel->push_back(coeff);
 
+                // assign the closest point and the two other points of i in the pointSelInd vector
                 if (isPointSel) {
                   pointSelInd[3 * i] = closestPointInd;
                   pointSelInd[3 * i + 1] = minPointInd2;
@@ -738,6 +849,9 @@ int main(int argc, char** argv)
 
               }
             }
+
+          // if it is a corner point
+          // 2 needed for association
           } else if (fabs(extreOri.v - 2) < 0.05) {
 
             int closestPointInd = -1, minPointInd2 = -1;

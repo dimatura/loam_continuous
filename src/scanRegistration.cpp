@@ -871,7 +871,7 @@ int main(int argc, char** argv)
   ros::Publisher pubImuTrans = nh.advertise<sensor_msgs::PointCloud2> ("/imu_trans", 5);
 
   // debug the laser angle
-  ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 2);
+  ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 1000);
 
   ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 2);
 
