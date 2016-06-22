@@ -93,6 +93,7 @@ bool imuInited = false;
 
 // debug
 std_msgs::Float32 s_param;
+std_msgs::Float32 iterNum_param;
 
 void TransformReset()
 {
@@ -470,8 +471,8 @@ int main(int argc, char** argv)
 
   // debug s parameter
   ros::Publisher pubSParam = nh.advertise<std_msgs::Float32>("/s_param", 1000);
-  
-
+  // debug iterNum param
+  ros::Publisher pubIterNumParam = nh.advertise<std_msgs::Float32>("/iter_num", 1000);
 
   ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry> ("/cam_to_init", 5);
   nav_msgs::Odometry laserOdometry;
@@ -799,9 +800,11 @@ int main(int argc, char** argv)
                   + extreSel.y * extreSel.y + extreSel.z * extreSel.z));
               }
 
-              s_param.data = mean_iterNum;
+              s_param.data = s;
               pubSParam.publish(s_param);
 
+              iterNum_param.data = iterNum;
+              pubIterNumParam.publish(iterNum_param);
               // ROS_INFO_STREAM("s: " << s);
 
               // compute the weighted new:

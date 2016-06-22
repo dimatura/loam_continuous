@@ -1,17 +1,6 @@
 <launch>
 
 	<arg name="rviz" default="true" />
-	
-	<!-- run some filtering on the laser scan-->
-	<!-- <node pkg="laser_filters" type="scan_to_cloud_filter_chain" name="no_filter"> -->
-		<!-- <rosparam command="load" file="$(find loam_multisense)/filters/my_laser_config.yaml" /> -->
-		<!-- <rosparam command="load" file="$(find mypkg)/my_cloud_config.yaml" /> -->
-		<!-- <param name="high_fidelity" value="false" /> -->
-		<!-- <param name="target_frame" type="string" value="head" /> -->
-		<!-- <remap from="scan" to="lidar_scan" /> -->
-		<!-- <remap from="cloud_filtered" to="sync_scan_cloud_filtered" /> -->
-	<!-- </node> -->
-
 	<!-- The multisense urdf -->
 	<param name="robot_description" textfile="$(find multisense_description)/urdf/multisenseSL.urdf" />
 

@@ -101,6 +101,8 @@ ros::Publisher* pubSurfPointsFlatPointer;
 ros::Publisher* pubSurfPointsLessFlatPointer;
 ros::Publisher* pubImuTransPointer;
 ros::Publisher* pubLaserAnglePointer;
+// std_msgs::Float32MultiArray laserAngle2;
+// std_msgs::MultiArrayDimension msg_dim;
 std_msgs::Float32 laserAngle2;
 ros::Publisher* pubFirstPointPointer;
 ros::Publisher* pubLastPointPointer;
@@ -837,6 +839,11 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "scanRegistration");
   ros::NodeHandle nh;
 
+  // msg_dim.label = "Angle_output";
+  // msg_dim.size = 1;
+  // laserAngle2.layout.dim.push_back(msg_dim);
+  // laserAngle2.data.clear();
+
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
                                   ("/sync_scan_cloud_filtered", 2, laserCloudHandler);
 
@@ -871,7 +878,8 @@ int main(int argc, char** argv)
   ros::Publisher pubImuTrans = nh.advertise<sensor_msgs::PointCloud2> ("/imu_trans", 5);
 
   // debug the laser angle
-  ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 1000);
+  // ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32MultiArray>("/laser_angle", 2);
+  ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 2);
 
   ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 2);
 

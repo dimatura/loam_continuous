@@ -1,55 +1,36 @@
-#include "ros/ros.h"
-#include "tf/transform_listener.h"
-#include "sensor_msgs/PointCloud2.h"
-#include "tf/message_filter.h"
-#include "message_filters/subscriber.h"
-#include "laser_geometry/laser_geometry.h"
-#include "filters/filter_chain.h"
+#include <ros/ros.h>
+#include <tf/transform_listener.h>
+#include <laser_geometry/laser_geometry.h>
 
 /**
  * Scan2PointTranslator
  * Translates the points acquired from LaserScan to PointCloud2
  */
-class LaserScanToPointCloud{
+class Scan2PointTranslator {
+    public:
+        Scan2PointTranslator();
+        void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
+    private:
+        ros::NodeHandle nh;
+        laser_geometry::LaserProjection lp;
+        tf::TransformListener listener;
 
-public:
+        ros::Publisher point_cloud_publisher;
+        ros::Subscriber scan_sub;
+        sensor_msgs::PointCloud2 filterCloud(const sensor_msgs::PointCloud2& scanPC);
+};
 
-  ros::NodeHandle n_;
-  laser_geometry::LaserProjection projector_;
-  tf::TransformListener listener_;
-  message_filters::Subscriber<sensor_msgs::LaserScan> laser_sub_;
-  tf::MessageFilter<sensor_msgs::LaserScan> laser_notifier_;
-  ros::Publisher scan_pub_;
-  sensor_msgs::LaserScan filtered_scan;
+Scan2PointTranslator::Scan2PointTranslator() {
+    scan_sub = nh.subscribe<sensor_msgs::LaserScan> ("/lidar_scan", 2, &Scan2PointTranslator::scanCallback, this);
+    point_cloud_publisher = nh.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered", 2);
+}
 
-  // Filter Chain
-  filters::FilterChain<sensor_msgs::LaserScan> filter_chain_;
-
-  LaserScanToPointCloud(ros::NodeHandle n) : 
-    n_(n),
-    laser_sub_(n_, "lidar_scan", 10),
-    laser_notifier_(laser_sub_,listener_, "head", 10),
-    filter_chain_("sensor_msgs::LaserScan")
-  {
-    // Configure filter chain
-    filter_chain_.configure("");
-
-    laser_notifier_.registerCallback(
-      boost::bind(&LaserScanToPointCloud::scanCallback, this, _1));
-    laser_notifier_.setTolerance(ros::Duration(0.01));
-    scan_pub_ = n_.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered",1);
-  }
-
-  void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
-  {
-
-    // Run the filter chain
-    filter_chain_.update (*scan_in, filtered_scan);
+void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr &scan ) {
     try {
-        if(!listener_.waitForTransform(
-            scan_in->header.frame_id,
+        if(!listener.waitForTransform(
+            scan->header.frame_id,
             "/head",
-            scan_in->header.stamp + ros::Duration().fromSec(scan_in->ranges.size()*scan_in->time_increment),
+            scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment),
             ros::Duration(1.0))) {
             return;
         }
@@ -60,20 +41,16 @@ public:
     }
      
     sensor_msgs::PointCloud2 cloud;
-    projector_.transformLaserScanToPointCloud( "/head", *scan_in, cloud, listener_);
-    scan_pub_.publish(cloud);
+    lp.transformLaserScanToPointCloud( "/head", *scan, cloud, listener);
+    point_cloud_publisher.publish(cloud);
+}
 
-  }
-};
+int main(int argc, char** argv) {
+    ros::init(argc, argv, "translateScan");
 
-int main(int argc, char** argv)
-{
-  
-  ros::init(argc, argv, "translateScan");
-  ros::NodeHandle n;
-  LaserScanToPointCloud lstopc(n);
-  
-  ros::spin();
-  
-  return 0;
+    Scan2PointTranslator s2pt;
+
+    ros::spin();
+
+    return 0;
 }
