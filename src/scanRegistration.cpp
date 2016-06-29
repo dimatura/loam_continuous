@@ -851,8 +851,8 @@ int main(int argc, char** argv)
   // msgs to quaternion not properly normalized from imu/imu_data
 
   // imu not properly aligned. TODO: fix this topic
-  // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
-  //                          ("/imu/data", 50, imuHandler);
+  ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
+                           ("/imu/data", 50, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
                                          ("/laser_cloud_extre_cur", 2);

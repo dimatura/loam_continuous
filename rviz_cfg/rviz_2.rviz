@@ -6,11 +6,16 @@ Panels:
       Expanded:
         - /Global Options1
         - /Status1
+        - /TF1
+        - /TF1/Frames1
+        - /TF1/Frames1/head1
         - /Odometry1
+        - /Corner Points1
+        - /Planar Points1
         - /Selected Points1
         - /Unselected Points1
         - /Mapped Corner Points1
-        - /Mapped Corner Points2
+        - /Mapped Planar Points1
       Splitter Ratio: 0.5
     Tree Height: 694
   - Class: rviz/Selection
@@ -31,7 +36,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Lidar Scan
+    SyncSource: Lidar Map
 Visualization Manager:
   Class: ""
   Displays:
@@ -54,19 +59,130 @@ Visualization Manager:
       Reference Frame: <Fixed Frame>
       Value: true
     - Class: rviz/TF
-      Enabled: false
+      Enabled: true
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        300Arch:
+          Value: false
+        All Enabled: false
+        accel:
+          Value: false
+        base_footprint:
+          Value: false
+        base_footprint_front_bumper_part:
+          Value: false
+        base_footprint_rear_bumper_part:
+          Value: false
+        base_footprint_top_plate_part:
+          Value: false
+        base_footprint_user_rail_part:
+          Value: false
+        base_link:
+          Value: false
+        camera_init:
+          Value: false
+        camera_init_2:
+          Value: false
+        center_bottom_led_frame:
+          Value: false
+        center_top_led_frame:
+          Value: false
+        gyro:
+          Value: false
+        head:
+          Value: true
+        head_hokuyo_frame:
+          Value: false
+        head_root:
+          Value: false
+        hokuyo_link:
+          Value: false
+        imu:
+          Value: false
+        left_camera_frame:
+          Value: false
+        left_camera_optical_frame:
+          Value: false
+        left_led_frame:
+          Value: false
+        mag:
+          Value: false
+        motor:
+          Value: false
+        odom:
+          Value: false
+        ptu_base_link:
+          Value: false
+        ptu_mount_link:
+          Value: false
+        ptu_pan_link:
+          Value: false
+        ptu_tilt_link:
+          Value: false
+        right_camera_frame:
+          Value: false
+        right_camera_optical_frame:
+          Value: false
+        right_led_frame:
+          Value: false
+        spindle:
+          Value: false
+        topPlate:
+          Value: false
       Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        {}
+        odom:
+          base_footprint:
+            base_footprint_front_bumper_part:
+              {}
+            base_footprint_rear_bumper_part:
+              {}
+            base_footprint_top_plate_part:
+              {}
+            base_footprint_user_rail_part:
+              {}
+            base_link:
+              imu:
+                {}
+              ptu_base_link:
+                ptu_pan_link:
+                  ptu_tilt_link:
+                    ptu_mount_link:
+                      head_root:
+                        accel:
+                          {}
+                        gyro:
+                          {}
+                        head:
+                          center_bottom_led_frame:
+                            {}
+                          center_top_led_frame:
+                            {}
+                          left_camera_frame:
+                            left_camera_optical_frame:
+                              motor:
+                                spindle:
+                                  hokuyo_link:
+                                    head_hokuyo_frame:
+                                      {}
+                          left_led_frame:
+                            {}
+                          right_camera_frame:
+                            right_camera_optical_frame:
+                              {}
+                          right_led_frame:
+                            {}
+                        mag:
+                          {}
+              topPlate:
+                300Arch:
+                  {}
       Update Interval: 0
-      Value: false
+      Value: true
     - Angle Tolerance: 0.1
       Class: rviz/Odometry
       Color: 255; 25; 0
@@ -92,9 +208,9 @@ Visualization Manager:
       Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 10.6354
+      Max Intensity: 6.94653
       Min Color: 0; 0; 0
-      Min Intensity: -5.34627
+      Min Intensity: -1.31183
       Name: Lidar Map
       Position Transformer: XYZ
       Queue Size: 10
@@ -119,7 +235,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4003
@@ -136,7 +252,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Class: rviz/RobotModel
       Collision Enabled: false
@@ -262,10 +378,40 @@ Visualization Manager:
       Axis: Z
       Channel Name: y
       Class: rviz/PointCloud2
-      Color: 85; 255; 0
+      Color: 85; 85; 127
       Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.63994
+      Min Color: 0; 0; 0
+      Min Intensity: -7.71218
+      Name: Planar Points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 5
+      Size (m): 0.01
+      Style: Points
+      Topic: /pc2
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: y
+      Class: rviz/PointCloud2
+      Color: 85; 255; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 6.63994
@@ -282,7 +428,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -295,7 +441,7 @@ Visualization Manager:
       Color: 255; 0; 0
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 6.63994
@@ -312,7 +458,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -325,7 +471,7 @@ Visualization Manager:
       Color: 255; 85; 255
       Color Transformer: FlatColor
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 6.80021
@@ -342,7 +488,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -361,7 +507,7 @@ Visualization Manager:
       Max Intensity: 6.63994
       Min Color: 0; 0; 0
       Min Intensity: -7.71218
-      Name: Mapped Corner Points
+      Name: Mapped Planar Points
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
@@ -397,22 +543,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 34.8185
+      Distance: 26.7658
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.216082
-        Y: 0.106762
-        Z: 1.15809e-05
+        X: 0.986734
+        Y: 0.638623
+        Z: 1.12829e-05
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.289798
+      Pitch: 1.1548
       Target Frame: head
       Value: ThirdPersonFollower (rviz)
-      Yaw: 1.00178
+      Yaw: 4.85992
     Saved: ~
 Window Geometry:
   Displays:

@@ -10,7 +10,7 @@
 	<node pkg="loam_multisense" type="laserMapping_ms" name="laserMapping_ms" output="screen"/>
 	<node pkg="loam_multisense" type="transformMaintenance_ms" name="transformMaintenance_ms" output="screen"/>
 	<group if="$(arg rviz)">
-		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/loam_multisense.rviz"/>
-		<!-- <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/rviz_2.rviz"/> -->
+		<!-- <node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/loam_multisense.rviz"/> -->
+		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/rviz_2.rviz"/>
 	</group>
 </launch>
