@@ -7,9 +7,10 @@ Panels:
         - /Global Options1
         - /Status1
         - /Odometry1
-        - /Lidar Map1
-        - /RobotModel1
         - /Selected Points1
+        - /Unselected Points1
+        - /Mapped Corner Points1
+        - /Mapped Corner Points2
       Splitter Ratio: 0.5
     Tree Height: 694
   - Class: rviz/Selection
@@ -69,13 +70,13 @@ Visualization Manager:
     - Angle Tolerance: 0.1
       Class: rviz/Odometry
       Color: 255; 25; 0
-      Enabled: true
+      Enabled: false
       Keep: 100
       Length: 1
       Name: Odometry
       Position Tolerance: 0.1
       Topic: /cam_to_init
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -88,12 +89,12 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 7.40404
+      Max Intensity: 10.6354
       Min Color: 0; 0; 0
-      Min Intensity: -1.78118
+      Min Intensity: -5.34627
       Name: Lidar Map
       Position Transformer: XYZ
       Queue Size: 10
@@ -105,7 +106,7 @@ Visualization Manager:
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
@@ -231,20 +232,50 @@ Visualization Manager:
       Axis: Z
       Channel Name: y
       Class: rviz/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color: 170; 255; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.63994
+      Min Color: 0; 0; 0
+      Min Intensity: -7.71218
+      Name: Corner Points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 5
+      Size (m): 0.01
+      Style: Points
+      Topic: /pc1
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: y
+      Class: rviz/PointCloud2
+      Color: 85; 255; 0
+      Color Transformer: FlatColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 7.40404
+      Max Intensity: 6.63994
       Min Color: 0; 0; 0
-      Min Intensity: -1.78118
+      Min Intensity: -7.71218
       Name: Selected Points
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 1
+      Size (Pixels): 10
       Size (m): 0.01
       Style: Points
       Topic: /pc3
@@ -252,6 +283,96 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: y
+      Class: rviz/PointCloud2
+      Color: 255; 0; 0
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.63994
+      Min Color: 0; 0; 0
+      Min Intensity: -7.71218
+      Name: Unselected Points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 10
+      Size (m): 0.01
+      Style: Points
+      Topic: /pc4
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 6.82545
+        Min Value: -1.29953
+        Value: true
+      Axis: Z
+      Channel Name: y
+      Class: rviz/PointCloud2
+      Color: 255; 85; 255
+      Color Transformer: FlatColor
+      Decay Time: 0
+      Enabled: true
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.80021
+      Min Color: 0; 0; 0
+      Min Intensity: -1.27967
+      Name: Mapped Corner Points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 5
+      Size (m): 0.01
+      Style: Points
+      Topic: /pc_m1
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Autocompute Value Bounds:
+        Max Value: 10
+        Min Value: -10
+        Value: true
+      Axis: Z
+      Channel Name: y
+      Class: rviz/PointCloud2
+      Color: 170; 255; 0
+      Color Transformer: ""
+      Decay Time: 0
+      Enabled: false
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 6.63994
+      Min Color: 0; 0; 0
+      Min Intensity: -7.71218
+      Name: Mapped Corner Points
+      Position Transformer: XYZ
+      Queue Size: 10
+      Selectable: true
+      Size (Pixels): 5
+      Size (m): 0.01
+      Style: Points
+      Topic: /pc_m2
+      Unreliable: false
+      Use Fixed Frame: true
+      Use rainbow: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -276,22 +397,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 31.6831
+      Distance: 34.8185
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.255752
-        Y: -0.121184
-        Z: 6.4969e-06
+        X: 0.216082
+        Y: 0.106762
+        Z: 1.15809e-05
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.540204
-      Target Frame: aft_mapped
+      Pitch: 0.289798
+      Target Frame: head
       Value: ThirdPersonFollower (rviz)
-      Yaw: 2.73544
+      Yaw: 1.00178
     Saved: ~
 Window Geometry:
   Displays:

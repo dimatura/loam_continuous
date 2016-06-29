@@ -1,6 +1,8 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 #include <laser_geometry/laser_geometry.h>
+#include <nav_msgs/Odometry.h>
+#include <sensor_msgs/Imu.h>
 
 /**
  * Scan2PointTranslator
@@ -10,6 +12,7 @@ class Scan2PointTranslator {
     public:
         Scan2PointTranslator();
         void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan);
+        void rotateOrigin(const sensor_msgs::Imu::ConstPtr& imuDataIn);
     private:
         ros::NodeHandle nh;
         laser_geometry::LaserProjection lp;
@@ -21,7 +24,13 @@ class Scan2PointTranslator {
 };
 
 Scan2PointTranslator::Scan2PointTranslator() {
+    // subscribe to the lidar scan
     scan_sub = nh.subscribe<sensor_msgs::LaserScan> ("/lidar_scan", 2, &Scan2PointTranslator::scanCallback, this);
+
+    // subscribe to the IMU data
+    // imu_sub = nh.subscribe<sensor_msgs::Imu>("/imu/data", 2, &Scan2PointTranslator::rotateOrigin, this);
+
+    // publish a pointcloud from the laser
     point_cloud_publisher = nh.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered", 2);
 }
 
@@ -43,6 +52,10 @@ void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr 
     sensor_msgs::PointCloud2 cloud;
     lp.transformLaserScanToPointCloud( "/head", *scan, cloud, listener);
     point_cloud_publisher.publish(cloud);
+}
+
+void Scan2PointTranslator::rotateOrigin(const sensor_msgs::Imu::ConstPtr &imuDataIn) {
+
 }
 
 int main(int argc, char** argv) {

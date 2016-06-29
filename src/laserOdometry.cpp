@@ -28,8 +28,9 @@ const double rad2deg = 180 / PI;
 const double deg2rad = PI / 180;
 
 // ENOUGH POINTS
-const int ENOUGH_POINTS_THRESHOLD = 250;
+const int ENOUGH_POINTS_THRESHOLD = 100;
 const float SURFACE_POINT_CLOSEST_NEIGHBOUR_SQ_DIST_SKIP_THRESHOLD = 1.0;
+const float CORNER_POINT_CLOSEST_NEIGHBOUR_SQ_DIST_SKIP_THRESHOLD = 1.0;
 const float CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME = 0.07;
 const float CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME = 0.005;
 float mean_iterNum = 0;
@@ -95,6 +96,9 @@ bool imuInited = false;
 std_msgs::Float32 s_param;
 std_msgs::Float32 iterNum_param;
 
+/**
+ * Resets the transformation (beginning of sweep)
+ */
 void TransformReset()
 {
   for (int i = 0; i < 6; i++) {
@@ -550,9 +554,12 @@ int main(int argc, char** argv)
       laserOdometryTrans.stamp_ = ros::Time().fromSec(timeLaserCloudExtreCur);
 
       float s = (timeLasted - timeLastedRec) / (startTimeCur - startTimeLast);
+      // record the last transformations
       for (int i = 0; i < 6; i++) {
         transform[i] += s * transformRec[i];        
       }
+
+      // time at which the transform was last recorded
       timeLastedRec = timeLasted;
 
       // we declare we have new laser points
@@ -588,7 +595,7 @@ int main(int argc, char** argv)
       currIter++;
 
       mean_iterNum = mean_iterNum + ((iterNum-mean_iterNum)/currIter);
-      ROS_INFO_STREAM("Mean iter: " << mean_iterNum);
+      // ROS_INFO_STREAM("Mean iter: " << mean_iterNum);
 
       int pointSelSkipNum = 2; // number of selected points to skip, basically every 3 point is selected
       for (int iterCount = 0; iterCount < iterNum; iterCount++) {
@@ -858,18 +865,21 @@ int main(int argc, char** argv)
           } else if (fabs(extreOri.v - 2) < 0.05) {
 
             int closestPointInd = -1, minPointInd2 = -1;
+            // if a point is selected for search
             if (isPointSel) {
               kdtreeCornerPtr->nearestKSearch(extreSel, 1, pointSearchInd, pointSearchSqDis);
-              if (pointSearchSqDis[0] > 1.0) {
+              if (pointSearchSqDis[0] > CORNER_POINT_CLOSEST_NEIGHBOUR_SQ_DIST_SKIP_THRESHOLD) {
                 continue;
               }
 
+              // retrieve the index of the closest point and the time
               closestPointInd = pointSearchInd[0];
               float closestPointTime = laserCloudCornerPtr->points[closestPointInd].h;
 
+              //
               float pointSqDis, minPointSqDis2 = 1;
               for (int j = closestPointInd + 1; j < laserCloudCornerNum; j++) {
-                if (laserCloudCornerPtr->points[j].h > closestPointTime + 0.07) {
+                if (laserCloudCornerPtr->points[j].h > closestPointTime + CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME) {
                   break;
                 }
 
@@ -880,7 +890,7 @@ int main(int argc, char** argv)
                              (laserCloudCornerPtr->points[j].z - extreSel.z) * 
                              (laserCloudCornerPtr->points[j].z - extreSel.z);
 
-                if (laserCloudCornerPtr->points[j].h > closestPointTime + 0.005) {
+                if (laserCloudCornerPtr->points[j].h > closestPointTime + CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME) {
                    if (pointSqDis < minPointSqDis2) {
                      minPointSqDis2 = pointSqDis;
                      minPointInd2 = j;
@@ -888,7 +898,7 @@ int main(int argc, char** argv)
                 }
               }
               for (int j = closestPointInd - 1; j >= 0; j--) {
-                if (laserCloudCornerPtr->points[j].h < closestPointTime - 0.07) {
+                if (laserCloudCornerPtr->points[j].h < closestPointTime - CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MAX_TIME) {
                   break;
                 }
 
@@ -899,13 +909,14 @@ int main(int argc, char** argv)
                              (laserCloudCornerPtr->points[j].z - extreSel.z) * 
                              (laserCloudCornerPtr->points[j].z - extreSel.z);
 
-                if (laserCloudCornerPtr->points[j].h < closestPointTime - 0.005) {
+                if (laserCloudCornerPtr->points[j].h < closestPointTime - CLOSEST_NEW_POINT_TIMESTAMP_THRESHOLD_FROM_NEIGHBOUR_MIN_TIME) {
                    if (pointSqDis < minPointSqDis2) {
                      minPointSqDis2 = pointSqDis;
                      minPointInd2 = j;
                    }
                 }
               }
+            // if a poit is not selected(i.e. every first or second)
             } else {
               if (pointSelInd[3 * i] >= 0) {
                 closestPointInd = pointSelInd[3 * i];
@@ -922,6 +933,7 @@ int main(int argc, char** argv)
               }
             }
 
+            // if we have selected 2 points, we can find the line segmetn
             if (minPointInd2 >= 0) {
               tripod1 = laserCloudCornerPtr->points[closestPointInd];
               tripod2 = laserCloudCornerPtr->points[minPointInd2];
@@ -936,13 +948,15 @@ int main(int argc, char** argv)
               float y2 = tripod2.y;
               float z2 = tripod2.z;
 
-              float a012 = sqrt(((x0 - x1)*(y0 - y2) - (x0 - x2)*(y0 - y1))
-                        * ((x0 - x1)*(y0 - y2) - (x0 - x2)*(y0 - y1)) 
-                        + ((x0 - x1)*(z0 - z2) - (x0 - x2)*(z0 - z1))
-                        * ((x0 - x1)*(z0 - z2) - (x0 - x2)*(z0 - z1)) 
-                        + ((y0 - y1)*(z0 - z2) - (y0 - y2)*(z0 - z1))
-                        * ((y0 - y1)*(z0 - z2) - (y0 - y2)*(z0 - z1)));
+              // area between extreSel 0 tripod1 and tripod2 points
+              // area between projections of triangles in the three ort vectors (vectors of origin)
+              float a012 = sqrt(
+                ((x0 - x1)*(y0 - y2) - (x0 - x2)*(y0 - y1)) * ((x0 - x1)*(y0 - y2) - (x0 - x2)*(y0 - y1)) 
+              + ((x0 - x1)*(z0 - z2) - (x0 - x2)*(z0 - z1)) * ((x0 - x1)*(z0 - z2) - (x0 - x2)*(z0 - z1)) 
+              + ((y0 - y1)*(z0 - z2) - (y0 - y2)*(z0 - z1)) * ((y0 - y1)*(z0 - z2) - (y0 - y2)*(z0 - z1))
+              );
 
+              // magnitute between tripod1 and tripod2
               float l12 = sqrt((x1 - x2)*(x1 - x2) + (y1 - y2)*(y1 - y2) + (z1 - z2)*(z1 - z2));
 
               float la = ((y1 - y2)*((x0 - x1)*(y0 - y2) - (x0 - x2)*(y0 - y1)) 
@@ -994,34 +1008,41 @@ int main(int argc, char** argv)
               }
             }
           }
-        }
+        } // finished iterating all the surface and corner points
         int extrePointSelNum = laserCloudExtreOri->points.size();
 
+        // if we d onot have enough selected points - skip the rest of the algorithm
         if (extrePointSelNum < 10) {
           continue;
         }
 
-        cv::Mat matA(extrePointSelNum, 6, CV_32F, cv::Scalar::all(0));
-        cv::Mat matAt(6, extrePointSelNum, CV_32F, cv::Scalar::all(0));
-        cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0));
-        cv::Mat matB(extrePointSelNum, 1, CV_32F, cv::Scalar::all(0));
-        cv::Mat matAtB(6, 1, CV_32F, cv::Scalar::all(0));
-        cv::Mat matX(6, 1, CV_32F, cv::Scalar::all(0));
+        // for the below matrices:
+        // N - number of selected points (extrePointSelNum)
+        // cv::Scalar::all(0) - matrices initialized with 0
+        cv::Mat matA(extrePointSelNum, 6, CV_32F, cv::Scalar::all(0)); // Nx6
+        cv::Mat matAt(6, extrePointSelNum, CV_32F, cv::Scalar::all(0)); // 6xN
+        cv::Mat matAtA(6, 6, CV_32F, cv::Scalar::all(0)); // 6x6
+        cv::Mat matB(extrePointSelNum, 1, CV_32F, cv::Scalar::all(0)); // Nx1
+        cv::Mat matAtB(6, 1, CV_32F, cv::Scalar::all(0)); // 6x1
+        cv::Mat matX(6, 1, CV_32F, cv::Scalar::all(0)); // 6x1
+
+        // iterate the selected points
         for (int i = 0; i < extrePointSelNum; i++) {
           extreOri = laserCloudExtreOri->points[i];
           coeff = coeffSel->points[i];
 
+          // (time from that point being taken - start time of this sweep) / (how much the algorithm has advanced in this sweep) 
           float s = (extreOri.h - startTime) / (endTime - startTime);
 
-          float srx = sin(s * transform[0]);
-          float crx = cos(s * transform[0]);
-          float sry = sin(s * transform[1]);
-          float cry = cos(s * transform[1]);
-          float srz = sin(s * transform[2]);
-          float crz = cos(s * transform[2]);
-          float tx = s * transform[3];
-          float ty = s * transform[4];
-          float tz = s * transform[5];
+          float srx = sin(s * transform[0]); // sine of rotation around x
+          float crx = cos(s * transform[0]); // cosine of rotation around x 
+          float sry = sin(s * transform[1]); // sine rotation around y
+          float cry = cos(s * transform[1]); // cosine rotation around y
+          float srz = sin(s * transform[2]); // sine rotation around z
+          float crz = cos(s * transform[2]); // cosine rotatoin around z
+          float tx = s * transform[3]; // translation around x
+          float ty = s * transform[4]; // translation around y
+          float tz = s * transform[5]; // translation around z
 
           float arx = (-s*crx*sry*srz*extreOri.x + s*crx*crz*sry*extreOri.y + s*srx*sry*extreOri.z 
                     + s*tx*crx*sry*srz - s*ty*crx*crz*sry - s*tz*srx*sry) * coeff.x
@@ -1068,7 +1089,7 @@ int main(int argc, char** argv)
         matAtA = matAt * matA; //+ 0.1 * cv::Mat::eye(6, 6, CV_32F);
         matAtB = matAt * matB;
         cv::solve(matAtA, matAtB, matX, cv::DECOMP_QR);
-        //cv::solve(matA, matB, matX, cv::DECOMP_SVD);
+        // cv::solve(matA, matB, matX, cv::DECOMP_SVD);
 
         if (fabs(matX.at<float>(0, 0)) < 0.005 &&
             fabs(matX.at<float>(1, 0)) < 0.005 &&
@@ -1174,6 +1195,7 @@ int main(int argc, char** argv)
                          startTimeLast, startTimeCur);
         }
 
+        // reset the current transforms to 0 and save them first 3 in transformRec(ent)
         TransformReset();
 
         transformSum[0] = rx;
@@ -1226,8 +1248,8 @@ int main(int argc, char** argv)
       laserOdometryTrans.setOrigin(tf::Vector3(tx, ty, tz));
       tfBroadcaster.sendTransform(laserOdometryTrans);
 
-      //ROS_INFO ("%f %f %f %f %f %f", transformSum[0], transformSum[1], transformSum[2], 
-      //                               transformSum[3], transformSum[4], transformSum[5]);
+      ROS_INFO ("%f %f %f %f %f %f", transformSum[0], transformSum[1], transformSum[2], 
+                                     transformSum[3], transformSum[4], transformSum[5]);
     }
 
     status = ros::ok();

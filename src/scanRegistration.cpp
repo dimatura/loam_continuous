@@ -90,8 +90,8 @@ float imuShiftX[imuQueLength] = {0};
 float imuShiftY[imuQueLength] = {0};
 float imuShiftZ[imuQueLength] = {0};
 
-//double imuAccuRoll = 0;
-//double imuAccuPitch = 0;
+double imuAccuRoll = 0;
+double imuAccuPitch = 0;
 double imuAccuYaw = 0;
 
 // debug purpose publishers to show the corners and flat areas
@@ -800,7 +800,7 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
   tf::Quaternion orientation;
   tf::quaternionMsgToTF(imuIn->orientation, orientation);
   tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
-  //ROS_INFO("[imu] roll:%f, pitch:%f, yaw:%f ", yaw,pitch,roll);
+  // ROS_INFO("[imu] roll:%f, pitch:%f, yaw:%f ", yaw,pitch,roll);
 
   int imuPointerBack = imuPointerLast; // initially -1
   imuPointerLast = (imuPointerLast + 1) % imuQueLength; // the array pointer 0 - imuQueueLength (100 in MS case)
@@ -812,13 +812,13 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 
     // conversion b/w different coordinate systems
 
-    //imuAccuRoll += timeDiff * imuIn->angular_velocity.x;
+    // imuAccuRoll += timeDiff * imuIn->angular_velocity.x;
     //imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
     imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
 
     imuRoll[imuPointerLast] = roll;
     imuPitch[imuPointerLast] = -pitch;
-    //imuYaw[imuPointerLast] = -yaw;
+    // imuYaw[imuPointerLast] = -yaw;
     //imuRoll[imuPointerLast] = imuAccuRoll;
     //imuPitch[imuPointerLast] = -imuAccuPitch;
     imuYaw[imuPointerLast] = -imuAccuYaw;
@@ -849,8 +849,10 @@ int main(int argc, char** argv)
 
   // multisense's imu is at /imu/imu_data
   // msgs to quaternion not properly normalized from imu/imu_data
-  ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
-                           ("/imu/data", 50, imuHandler);
+
+  // imu not properly aligned. TODO: fix this topic
+  // ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
+  //                          ("/imu/data", 50, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
                                          ("/laser_cloud_extre_cur", 2);
