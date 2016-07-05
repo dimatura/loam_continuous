@@ -55,7 +55,7 @@ pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudOri(new pcl::PointCloud<pcl::Po
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSel(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudCorr(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudProj(new pcl::PointCloud<pcl::PointXYZHSV>());
-
+// end debug
 
 
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr coeffSel(new pcl::PointCloud<pcl::PointXYZHSV>());
@@ -266,7 +266,7 @@ int main(int argc, char** argv)
   ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m3", 1);
 
   ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m4", 1);
-
+  // end debug
 
 
 
@@ -425,13 +425,13 @@ int main(int argc, char** argv)
 
         for (int iterCount = 0; iterCount < 10; iterCount++) {
           laserCloudOri->clear();
+          
 
-
-
+          // debug
           laserCloudSel->clear();
           laserCloudCorr->clear();
           laserCloudProj->clear();
-
+          // end debug
 
 
           coeffSel->clear();
@@ -506,7 +506,7 @@ int main(int argc, char** argv)
                       laserCloudCorr->push_back(laserCloudSurfFromMap->points[pointSearchInd[2]]);
                       laserCloudCorr->push_back(laserCloudSurfFromMap->points[pointSearchInd[3]]);
                       laserCloudCorr->push_back(laserCloudSurfFromMap->points[pointSearchInd[4]]);
-                     
+                      // end debug
 
 
                       coeffSel->push_back(coeff);
@@ -623,7 +623,7 @@ int main(int argc, char** argv)
                       laserCloudCorr->push_back(laserCloudCornerFromMap->points[pointSearchInd[2]]);
                       laserCloudCorr->push_back(laserCloudCornerFromMap->points[pointSearchInd[3]]);
                       laserCloudCorr->push_back(laserCloudCornerFromMap->points[pointSearchInd[4]]);
-
+                      // end debug
 
 
                       coeffSel->push_back(coeff);
@@ -696,7 +696,7 @@ int main(int argc, char** argv)
             transformTobeMapped[4] += matX.at<float>(4, 0);
             transformTobeMapped[5] += matX.at<float>(5, 0);
           } else {
-            //ROS_INFO ("Mapping update out of bound");
+            ROS_INFO ("Mapping update out of bound");
           }
         }
       }
@@ -820,6 +820,9 @@ int main(int argc, char** argv)
       pc42.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
       pc42.header.frame_id = "/camera_init_2";
       pub4.publish(pc42);
+      // end debug
+
+
     }
 
     status = ros::ok();
