@@ -117,63 +117,63 @@ ros::Publisher* pubLastPointPointer;
 
 void ShiftToStartIMU()
 {
-  // float x1 = cos(imuYawStart) * imuShiftFromStartXCur - sin(imuYawStart) * imuShiftFromStartZCur;
-  // float y1 = imuShiftFromStartYCur;
-  // float z1 = sin(imuYawStart) * imuShiftFromStartXCur + cos(imuYawStart) * imuShiftFromStartZCur;
+  float x1 = cos(imuYawStart) * imuShiftFromStartXCur - sin(imuYawStart) * imuShiftFromStartZCur;
+  float y1 = imuShiftFromStartYCur;
+  float z1 = sin(imuYawStart) * imuShiftFromStartXCur + cos(imuYawStart) * imuShiftFromStartZCur;
 
-  // float x2 = x1;
-  // float y2 =  cos(imuPitchStart) * y1 + sin(imuPitchStart) * z1;
-  // float z2 = -sin(imuPitchStart) * y1 + cos(imuPitchStart) * z1;
+  float x2 = x1;
+  float y2 =  cos(imuPitchStart) * y1 + sin(imuPitchStart) * z1;
+  float z2 = -sin(imuPitchStart) * y1 + cos(imuPitchStart) * z1;
 
-  // imuShiftFromStartXCur =  cos(imuRollStart) * x2 + sin(imuRollStart) * y2;
-  // imuShiftFromStartYCur = -sin(imuRollStart) * x2 + cos(imuRollStart) * y2;
-  // imuShiftFromStartZCur = z2;
+  imuShiftFromStartXCur =  cos(imuRollStart) * x2 + sin(imuRollStart) * y2;
+  imuShiftFromStartYCur = -sin(imuRollStart) * x2 + cos(imuRollStart) * y2;
+  imuShiftFromStartZCur = z2;
 }
 
 void VeloToStartIMU()
 {
-  // float x1 = cos(imuYawStart) * imuVeloFromStartXCur - sin(imuYawStart) * imuVeloFromStartZCur;
-  // float y1 = imuVeloFromStartYCur;
-  // float z1 = sin(imuYawStart) * imuVeloFromStartXCur + cos(imuYawStart) * imuVeloFromStartZCur;
+  float x1 = cos(imuYawStart) * imuVeloFromStartXCur - sin(imuYawStart) * imuVeloFromStartZCur;
+  float y1 = imuVeloFromStartYCur;
+  float z1 = sin(imuYawStart) * imuVeloFromStartXCur + cos(imuYawStart) * imuVeloFromStartZCur;
 
-  // float x2 = x1;
-  // float y2 = cos(imuPitchStart) * y1 + sin(imuPitchStart) * z1;
-  // float z2 = -sin(imuPitchStart) * y1 + cos(imuPitchStart) * z1;
+  float x2 = x1;
+  float y2 = cos(imuPitchStart) * y1 + sin(imuPitchStart) * z1;
+  float z2 = -sin(imuPitchStart) * y1 + cos(imuPitchStart) * z1;
 
-  // imuVeloFromStartXCur = cos(imuRollStart) * x2 + sin(imuRollStart) * y2;
-  // imuVeloFromStartYCur = -sin(imuRollStart) * x2 + cos(imuRollStart) * y2;
-  // imuVeloFromStartZCur = z2;
+  imuVeloFromStartXCur = cos(imuRollStart) * x2 + sin(imuRollStart) * y2;
+  imuVeloFromStartYCur = -sin(imuRollStart) * x2 + cos(imuRollStart) * y2;
+  imuVeloFromStartZCur = z2;
 }
 
 void TransformToStartIMU(pcl::PointXYZHSV *p)
 {
-  // // rotation over z
-  // float x1 = cos(imuRollCur) * p->x - sin(imuRollCur) * p->y;
-  // float y1 = sin(imuRollCur) * p->x + cos(imuRollCur) * p->y;
-  // float z1 = p->z;
+  // rotation over z
+  float x1 = cos(imuRollCur) * p->x - sin(imuRollCur) * p->y;
+  float y1 = sin(imuRollCur) * p->x + cos(imuRollCur) * p->y;
+  float z1 = p->z;
 
-  // // rotation over x
-  // float x2 = x1;
-  // float y2 = cos(imuPitchCur) * y1 - sin(imuPitchCur) * z1;
-  // float z2 = sin(imuPitchCur) * y1 + cos(imuPitchCur) * z1;
+  // rotation over x
+  float x2 = x1;
+  float y2 = cos(imuPitchCur) * y1 - sin(imuPitchCur) * z1;
+  float z2 = sin(imuPitchCur) * y1 + cos(imuPitchCur) * z1;
 
-  // // rotation over y
-  // float x3 = cos(imuYawCur) * x2 + sin(imuYawCur) * z2;
-  // float y3 = y2;
-  // float z3 = -sin(imuYawCur) * x2 + cos(imuYawCur) * z2;
+  // rotation over y
+  float x3 = cos(imuYawCur) * x2 + sin(imuYawCur) * z2;
+  float y3 = y2;
+  float z3 = -sin(imuYawCur) * x2 + cos(imuYawCur) * z2;
 
 
-  // float x4 = cos(imuYawStart) * x3 - sin(imuYawStart) * z3;
-  // float y4 = y3;
-  // float z4 = sin(imuYawStart) * x3 + cos(imuYawStart) * z3;
+  float x4 = cos(imuYawStart) * x3 - sin(imuYawStart) * z3;
+  float y4 = y3;
+  float z4 = sin(imuYawStart) * x3 + cos(imuYawStart) * z3;
 
-  // float x5 = x4;
-  // float y5 = cos(imuPitchStart) * y4 + sin(imuPitchStart) * z4;
-  // float z5 = -sin(imuPitchStart) * y4 + cos(imuPitchStart) * z4;
+  float x5 = x4;
+  float y5 = cos(imuPitchStart) * y4 + sin(imuPitchStart) * z4;
+  float z5 = -sin(imuPitchStart) * y4 + cos(imuPitchStart) * z4;
 
-  // p->x = cos(imuRollStart) * x5 + sin(imuRollStart) * y5 + imuShiftFromStartXCur;
-  // p->y = -sin(imuRollStart) * x5 + cos(imuRollStart) * y5 + imuShiftFromStartYCur;
-  // p->z = z5 + imuShiftFromStartZCur;
+  p->x = cos(imuRollStart) * x5 + sin(imuRollStart) * y5 + imuShiftFromStartXCur;
+  p->y = -sin(imuRollStart) * x5 + cos(imuRollStart) * y5 + imuShiftFromStartYCur;
+  p->z = z5 + imuShiftFromStartZCur;
 }
 
 /*
@@ -186,40 +186,46 @@ void TransformToStartIMU(pcl::PointXYZHSV *p)
  */
 void AccumulateIMUShift()
 {
-  // float roll = imuRoll[imuPointerLast];
-  // float pitch = imuPitch[imuPointerLast];
-  // float yaw = imuYaw[imuPointerLast];
-  // float accX = imuAccX[imuPointerLast];
-  // float accY = imuAccY[imuPointerLast];
-  // float accZ = imuAccZ[imuPointerLast];
+  // retrieve the RPY and the acceleration
+  float roll = imuRoll[imuPointerLast];
+  float pitch = imuPitch[imuPointerLast];
+  float yaw = imuYaw[imuPointerLast];
+  float accX = imuAccX[imuPointerLast];
+  float accY = imuAccY[imuPointerLast];
+  float accZ = imuAccZ[imuPointerLast];
 
-  // float x1 = cos(roll) * accX - sin(roll) * accY;
-  // float y1 = sin(roll) * accX + cos(roll) * accY;
-  // float z1 = accZ;
+  // ROS_INFO_STREAM("accX, accY, accZ: (" << accX << ", " << accY << ", " << accZ << ")");
 
-  // float x2 = x1;
-  // float y2 = cos(pitch) * y1 - sin(pitch) * z1;
-  // float z2 = sin(pitch) * y1 + cos(pitch) * z1;
+  // roll is around z axis ??
+  float x1 = cos(roll) * accX - sin(roll) * accY;
+  float y1 = sin(roll) * accX + cos(roll) * accY;
+  float z1 = accZ;
 
-  // accX =  cos(yaw) * x2 + sin(yaw) * z2;
-  // accY = y2;
-  // accZ = -sin(yaw) * x2 + cos(yaw) * z2;
+  // pitch is around x axis?
+  float x2 = x1;
+  float y2 = cos(pitch) * y1 - sin(pitch) * z1;
+  float z2 = sin(pitch) * y1 + cos(pitch) * z1;
 
-  // int imuPointerBack = (imuPointerLast + imuQueLength - 1) % imuQueLength;
-  // double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
-  // if (timeDiff < 0.1) {
+  // yaw is around y axis?
+  accX =  cos(yaw) * x2 + sin(yaw) * z2;
+  accY = y2;
+  accZ = -sin(yaw) * x2 + cos(yaw) * z2;
 
-  //   imuShiftX[imuPointerLast] = imuShiftX[imuPointerBack] + imuVeloX[imuPointerBack] * timeDiff 
-  //                             + accX * timeDiff * timeDiff / 2;
-  //   imuShiftY[imuPointerLast] = imuShiftY[imuPointerBack] + imuVeloY[imuPointerBack] * timeDiff 
-  //                             + accY * timeDiff * timeDiff / 2;
-  //   imuShiftZ[imuPointerLast] = imuShiftZ[imuPointerBack] + imuVeloZ[imuPointerBack] * timeDiff 
-  //                             + accZ * timeDiff * timeDiff / 2;
+  int imuPointerBack = (imuPointerLast + imuQueLength - 1) % imuQueLength;
+  double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
+  if (timeDiff < 0.1) {
 
-  //   imuVeloX[imuPointerLast] = imuVeloX[imuPointerBack] + accX * timeDiff;
-  //   imuVeloY[imuPointerLast] = imuVeloY[imuPointerBack] + accY * timeDiff;
-  //   imuVeloZ[imuPointerLast] = imuVeloZ[imuPointerBack] + accZ * timeDiff;
-  // }
+    imuShiftX[imuPointerLast] = imuShiftX[imuPointerBack] + imuVeloX[imuPointerBack] * timeDiff 
+                              + accX * timeDiff * timeDiff / 2;
+    imuShiftY[imuPointerLast] = imuShiftY[imuPointerBack] + imuVeloY[imuPointerBack] * timeDiff 
+                              + accY * timeDiff * timeDiff / 2;
+    imuShiftZ[imuPointerLast] = imuShiftZ[imuPointerBack] + imuVeloZ[imuPointerBack] * timeDiff 
+                              + accZ * timeDiff * timeDiff / 2;
+
+    imuVeloX[imuPointerLast] = imuVeloX[imuPointerBack] + accX * timeDiff;
+    imuVeloY[imuPointerLast] = imuVeloY[imuPointerBack] + accY * timeDiff;
+    imuVeloZ[imuPointerLast] = imuVeloZ[imuPointerBack] + accZ * timeDiff;
+  }
 }
 
 /**
@@ -826,19 +832,23 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
     //imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
     // imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
     
-    // imuRoll[imuPointerLast] = roll;
-    // imuPitch[imuPointerLast] = -pitch;
-    // imuYaw[imuPointerLast] = -yaw;
+    imuRoll[imuPointerLast] = roll;
+    imuPitch[imuPointerLast] = -pitch;
+    imuYaw[imuPointerLast] = -yaw;
 
     // imuRoll[imuPointerLast] = imuAccuRoll;
     //imuPitch[imuPointerLast] = -imuAccuPitch;
     // imuYaw[imuPointerLast] = -imuAccuYaw;
 
-    //imuAccX[imuPointerLast] = -imuIn->linear_acceleration.y;
-    //imuAccY[imuPointerLast] = -imuIn->linear_acceleration.z - 9.81;
-    //imuAccZ[imuPointerLast] = imuIn->linear_acceleration.x;
+    // accumulate the IMU shift based on the data seen
+    imuAccX[imuPointerLast] = imuIn->linear_acceleration.y;
+    imuAccY[imuPointerLast] = imuIn->linear_acceleration.x + 9.81;// measurement of the gravity vector plus the gravity itself
+    imuAccZ[imuPointerLast] = imuIn->linear_acceleration.z; 
 
-	  // accumulate the IMU shift based on the data seen
+    // imuAccX[imuPointerLast] = -imuIn->linear_acceleration.y;
+    // imuAccY[imuPointerLast] = -imuIn->linear_acceleration.z - 9.81;
+    // imuAccZ[imuPointerLast] = imuIn->linear_acceleration.x;
+
     AccumulateIMUShift();
   }
 }
