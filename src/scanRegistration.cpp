@@ -832,9 +832,9 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
     //imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
     // imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
     
-    imuRoll[imuPointerLast] = roll;
-    imuPitch[imuPointerLast] = -pitch;
-    imuYaw[imuPointerLast] = -yaw;
+    imuRoll[imuPointerLast] = yaw;
+    imuPitch[imuPointerLast] = pitch;
+    imuYaw[imuPointerLast] = roll;
 
     // imuRoll[imuPointerLast] = imuAccuRoll;
     //imuPitch[imuPointerLast] = -imuAccuPitch;
