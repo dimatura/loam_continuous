@@ -114,6 +114,7 @@ ros::Publisher* pubLaserAnglePointer;
 std_msgs::Float32 laserAngle2;
 ros::Publisher* pubFirstPointPointer;
 ros::Publisher* pubLastPointPointer;
+ros::Publisher* pubImuVisPointer;
 
 void ShiftToStartIMU()
 {
@@ -225,6 +226,9 @@ void AccumulateIMUShift()
     imuVeloX[imuPointerLast] = imuVeloX[imuPointerBack] + accX * timeDiff;
     imuVeloY[imuPointerLast] = imuVeloY[imuPointerBack] + accY * timeDiff;
     imuVeloZ[imuPointerLast] = imuVeloZ[imuPointerBack] + accZ * timeDiff;
+
+    ROS_INFO_STREAM("IMU SHIFT (X,Y,Z): (" << imuShiftX[imuPointerLast] << ", " << imuShiftY[imuPointerLast] << ", " << imuShiftZ[imuPointerLast] << ")");
+    ROS_INFO_STREAM("IMU VELO (X,Y,Z): (" << imuVeloX[imuPointerLast] << ", " << imuVeloY[imuPointerLast] << ", " << imuVeloZ[imuPointerLast] << ")");
   }
 }
 
@@ -810,7 +814,40 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
   double roll, pitch, yaw;
   tf::Quaternion orientation;
   tf::quaternionMsgToTF(imuIn->orientation, orientation);
-  tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
+
+  geometry_msgs::PoseStamped imuVis;
+  // publish the imu quaternion
+  imuVis.pose.orientation.x = imuIn->orientation.x;
+  imuVis.pose.orientation.y = imuIn->orientation.y;
+  imuVis.pose.orientation.z = imuIn->orientation.z;
+  imuVis.pose.orientation.w = imuIn->orientation.w;
+  imuVis.pose.position.x = 0;
+  imuVis.pose.position.y = 0;
+  imuVis.pose.position.z = 0;
+
+  
+  imuVis.header.stamp = imuIn->header.stamp;
+  imuVis.header.frame_id = "/camera_init_2";
+//  pubImuVisPointer->publish(imuVis);
+
+  double bef_r, bef_p, bef_y, aft_r, aft_p, aft_y, or_aft_r, or_aft_p, or_aft_y;
+  tf::Matrix3x3(orientation).getRPY(bef_r, bef_p, bef_y);
+  // ROS_INFO_STREAM("ROTATION BEFORE (R,P,Y): " << "(" << bef_r*rad2deg << ", " << bef_p*rad2deg << ", " << bef_y*rad2deg << ")");
+  // rotate axis -pi/2 degrees in y direction
+  tf::Quaternion transformation_q;
+  transformation_q.setRotation( tf::Vector3(0,1,0), -tfScalar(PI/2));
+  tf::Quaternion parsed_orientation = orientation.operator*=(transformation_q);
+
+  tf::Matrix3x3(parsed_orientation).getRPY(aft_r, aft_p, aft_y);
+  tf::Matrix3x3(orientation).getRPY(or_aft_r, or_aft_p, or_aft_y);
+
+  // ROS_INFO_STREAM("ROTATION AFTER PARSED (R,P,Y): " << "(" << aft_r*rad2deg << ", " << aft_p*rad2deg << ", " << aft_y*rad2deg << ")");
+  // ROS_INFO_STREAM("ROTATION AFTER ORIG (R,P,Y): " << "(" << or_aft_r*rad2deg << ", " << or_aft_p*rad2deg << ", " << or_aft_y*rad2deg << ")");
+
+  // tf::transform transform;
+  // transform.setRotation(tf::quaternion(tf::Vector3(0,0,inRadians(45))))
+
+  tf::Matrix3x3(parsed_orientation).getRPY(roll, pitch, yaw);
   // ROS_INFO("[imu] roll:%f, pitch:%f, yaw:%f ", roll, pitch, yaw);
   // imuRollerF32.data = roll*rad2deg;
   // pubImuRollPointer->publish(imuRollerF32);
@@ -829,22 +866,48 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
   if (timeDiff < 0.1) {
 
     // imuAccuRoll += timeDiff * imuIn->angular_velocity.x;
-    //imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
-    // imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
+    // imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
+    imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
     
-    imuRoll[imuPointerLast] = yaw;
-    imuPitch[imuPointerLast] = pitch;
-    imuYaw[imuPointerLast] = roll;
-
+    imuRoll[imuPointerLast] = roll;
+    imuPitch[imuPointerLast] = -pitch;
+    
+    // imuYaw[imuPointerLast] = yaw;
     // imuRoll[imuPointerLast] = imuAccuRoll;
-    //imuPitch[imuPointerLast] = -imuAccuPitch;
-    // imuYaw[imuPointerLast] = -imuAccuYaw;
+    // imuPitch[imuPointerLast] = -imuAccuPitch;
+    imuYaw[imuPointerLast] = -imuAccuYaw;
+
+  ////////////////////////////
+    tf::Quaternion input_quat;
+
+    input_quat.setRPY(roll, -pitch, -imuAccuYaw);
+    
+    // ROS_INFO_STREAM(  input_quat.w() );
+
+    geometry_msgs::PoseStamped imuVis2;
+    // publish the imu quaternion
+    imuVis2.pose.orientation.x = input_quat.x();
+    imuVis2.pose.orientation.y = input_quat.y();
+    imuVis2.pose.orientation.z = input_quat.z();
+    imuVis2.pose.orientation.w = input_quat.w();
+    imuVis2.pose.position.x = 0;
+    imuVis2.pose.position.y = 0;
+    imuVis2.pose.position.z = 0;
+
+    
+    imuVis2.header.stamp = imuIn->header.stamp;
+    imuVis2.header.frame_id = "/camera_init_2";
+    pubImuVisPointer->publish(imuVis2);
+
+  ////////////////////////////////
+
 
     // accumulate the IMU shift based on the data seen
-    imuAccX[imuPointerLast] = imuIn->linear_acceleration.y;
-    imuAccY[imuPointerLast] = imuIn->linear_acceleration.x + 9.81;// measurement of the gravity vector plus the gravity itself
-    imuAccZ[imuPointerLast] = imuIn->linear_acceleration.z; 
+    // imuAccX[imuPointerLast] = imuIn->linear_acceleration.y;
+    // imuAccY[imuPointerLast] = imuIn->linear_acceleration.x + 9.81;// measurement of the gravity vector plus the gravity itself
+    // imuAccZ[imuPointerLast] = imuIn->linear_acceleration.z; 
 
+    // their original data
     // imuAccX[imuPointerLast] = -imuIn->linear_acceleration.y;
     // imuAccY[imuPointerLast] = -imuIn->linear_acceleration.z - 9.81;
     // imuAccZ[imuPointerLast] = imuIn->linear_acceleration.x;
@@ -905,6 +968,10 @@ int main(int argc, char** argv)
 
   ros::Publisher pubLastPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/last_point", 2);
 
+  // debug imu visualiser
+  ros::Publisher pubImuVis = nh.advertise<geometry_msgs::PoseStamped> 
+                                         ("/imu/q_pose", 2);
+
   pubLaserAnglePointer = &pubLaserAngle;
   pubCornerPointsSharpPointer = &pubCornerPointsSharp;
   pubCornerPointsLessSharpPointer = &pubCornerPointsLessSharp;
@@ -913,6 +980,7 @@ int main(int argc, char** argv)
   pubImuTransPointer = &pubImuTrans;
   pubFirstPointPointer = &pubFirstPoint;
   pubLastPointPointer = &pubLastPoint;
+  pubImuVisPointer = &pubImuVis;
 
   pubImuRollPointer = &pubImuRoll;
   pubImuPitchPointer = &pubImuPitch;
