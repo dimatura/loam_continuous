@@ -19,7 +19,9 @@ function [ pose_arr ] = parse_odometry_topic( input_file )
         [rem, pose_str] = strsplit(seq{i}, 'pose');
         % get the timestamp (rem{1})
         secs_str = strsplit(rem{1}, 'secs');
-        pose_arr(i,1) = sscanf(secs_str{2}, '%*s%d%*s');
+        secs = sscanf(secs_str{2}, '%*s%d%*s');
+        nsecs = sscanf(secs_str{3}, '%*s%d%*s');
+        pose_arr(i,1) = secs+nsecs*10^-9;
         % get the position and orientation(rem{3})
         [pose, rem2] = strsplit(rem{3}, 'covariance');
         % pose now looks like so:
@@ -36,7 +38,7 @@ function [ pose_arr ] = parse_odometry_topic( input_file )
     
     % save to file in the correct format for ATE/RPE
     fileID = fopen(output_file, 'w');
-    fprintf(fileID,'%10d %f %f %f %f %f %f %f\n', pose_arr');
+    fprintf(fileID,'%f %f %f %f %f %f %f %f\n', pose_arr');
     fclose(fileID);
 
 end

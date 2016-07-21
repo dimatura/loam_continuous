@@ -2,12 +2,7 @@ function [ ] = filter_gps_data( input_data, kalman_filter, median_filter_gps, me
 %FILTER_GPS_DATA Use either KF, median filtering over gps coordinates or
 %over navsat/enu data
     warning('off', 'all');
-
-    figure;
-    % show original data
-    hold on;
     
-    gg = line(input_data(:,1), input_data(:,2), input_data(:,3), 'Color', 'm');
     % KALMAN FILTER
     if kalman_filter
         gps_data = input_data(:,2:3);
@@ -43,35 +38,81 @@ function [ ] = filter_gps_data( input_data, kalman_filter, median_filter_gps, me
     
     % MEDIAN FILTER
     if median_filter_gps
-        % n-th order median filtetr
-        n = 150;
+        % ground truth GPS
+        figure;
+        hold on;
         
+        subplot(2,3,1);
+        gg = geoshow(input_data(:,2), input_data(:,3), 'Color', 'm');
+        plot_google_map;
+        title('Original GPS reading');
+        xlabel('Longitude');
+        ylabel('Latitude');
+        
+        
+        % 150 order median filter (-75;+74)
+        n = 151;
         run1_gps_filtered_150 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n), medfilt1(input_data(:,4), n)];
-        
+        subplot(2,3,2);
         gm150 = geoshow(run1_gps_filtered_150(2:end,2), run1_gps_filtered_150(2:end,3), 'DisplayType', 'line', 'Color', 'g');
+        plot_google_map;
+        title('Median Filtering of GPS with 150');
+        xlabel('Longitude');
+        ylabel('Latitude');
         
-        n = 200;
-        
+        % 200 order median filter (-100;+99)
+        n = 201;
         run1_gps_filtered_200 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n), medfilt1(input_data(:,4), n)];
-        
+        subplot(2,3,3);
         gm200 = geoshow(run1_gps_filtered_200(2:end,2), run1_gps_filtered_200(2:end,3), 'DisplayType', 'line', 'Color', 'r');
+        plot_google_map;
+        title('Median Filtering of GPS with 200');
+        xlabel('Longitude');
+        ylabel('Latitude');
         
-        n = 250;
-        
+        % 250 order median filter (-125;+124)
+        n = 251;        
         run1_gps_filtered_250 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n), medfilt1(input_data(:,4), n)];
-        
+        subplot(2,3,4);
         gm250 = geoshow(run1_gps_filtered_250(2:end,2), run1_gps_filtered_250(2:end,3), 'DisplayType', 'line', 'Color', 'b');
+        plot_google_map;
+        title('Median Filtering of GPS with 250');
+        xlabel('Longitude');
+        ylabel('Latitude');
         
-        n = 500;
-        
+        % 500 order median filter (-250;+249)
+        n = 501;
         run1_gps_filtered_500 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n), medfilt1(input_data(:,4), n)];
-        
+        subplot(2,3,5);
         gm500 = geoshow(run1_gps_filtered_500(2:end,2), run1_gps_filtered_500(2:end,3), 'DisplayType', 'line', 'Color', 'k');
-        
+        plot_google_map;
+        title('Median Filtering of GPS with 500');
+        xlabel('Longitude');
+        ylabel('Latitude');
+
+        % all in one figure
+        subplot(2,3,6);
+        gg = geoshow(input_data(:,2), input_data(:,3), 'Color', 'm');
+        gm150 = geoshow(run1_gps_filtered_150(2:end,2), run1_gps_filtered_150(2:end,3), 'DisplayType', 'line', 'Color', 'g');
+        gm200 = geoshow(run1_gps_filtered_200(2:end,2), run1_gps_filtered_200(2:end,3), 'DisplayType', 'line', 'Color', 'r');
+        gm250 = geoshow(run1_gps_filtered_250(2:end,2), run1_gps_filtered_250(2:end,3), 'DisplayType', 'line', 'Color', 'b');
+        gm500 = geoshow(run1_gps_filtered_500(2:end,2), run1_gps_filtered_500(2:end,3), 'DisplayType', 'line', 'Color', 'k');
+
+        title('Median Filtering comparison');
+        xlabel('Longitude');
+        ylabel('Latitude');
+%         view(180, 0);
+        legend([gg, gm150 gm200 gm250 gm500], 'GPS', 'Median 150', 'Median 200', 'Median 250', 'Median 500', 0);
+        hold off;
     end
     
     % MEDIAN FILTER WITH ENU DATA
     if median_filter_enu
+        figure;
+        hold on;
+        
+        % show original data
+        gg = line(input_data(:,1), input_data(:,2), input_data(:,3), 'Color', 'm');
         % n-th order median filtetr
         n = 150;
         run1_enu_filtered_150 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n)];
@@ -89,15 +130,16 @@ function [ ] = filter_gps_data( input_data, kalman_filter, median_filter_gps, me
         run1_enu_filtered_500 = [input_data(:,1), medfilt1(input_data(:,2), n), medfilt1(input_data(:,3), n), medfilt1(input_data(:,4), n)];
         gm500 = line(run1_enu_filtered_500(2:end,1), run1_enu_filtered_500(2:end,2), run1_enu_filtered_500(2:end,3), 'Color', 'k');
         
+        % plotting time
+        title('Median Filtering comparison');
+        xlabel('Relative Altitude');
+        ylabel('Relative Longitude');
+        zlabel('Relative Latitude');
+        view(90, 0);
+        legend([gg, gm150 gm200 gm250 gm500], 'GPS', 'Median 150', 'Median 200', 'Median 250', 'Median 500', 0);
+        hold off;
     end
     
-    % plotting time
-    title('Median Filtering comparison');
-    xlabel('Relative Altitude');
-    ylabel('Relative Longitude');
-    zlabel('Relative Latitude');
-    view(90, 0);
-    legend([gg, gm150 gm200 gm250 gm500], 'GPS', 'Median 150', 'Median 200', 'Median 250', 'Median 500', 0);
-    hold off;
+    
 end
 

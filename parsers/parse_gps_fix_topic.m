@@ -43,7 +43,9 @@ function [ pose_arr ] = parse_gps_fix_topic( input_file )
             if service == SERVICE_GPS
                 % parse the timestamps
                 secs_str = strsplit(rem{1,1}, 'secs');
-                pose_arr(i,1) = sscanf(secs_str{2}, '%*s%d%*s');
+                secs = sscanf(secs_str{2}, '%*s%d%*s');
+                nsecs = sscanf(secs_str{3}, '%*s%d%*s');
+                pose_arr(i,1) = secs+nsecs*10^-9;
                 
                 % parse the lat lon alt
                 position_str = strsplit(rem{1,2}, 'position_covariance');
@@ -71,7 +73,7 @@ function [ pose_arr ] = parse_gps_fix_topic( input_file )
     
     % save to file in the correct format for ATE/RPE
     fileID = fopen(output_file, 'w');
-    fprintf(fileID,'%10d %f %f %f\n', pose_arr');
+    fprintf(fileID,'%f %f %f %f\n', pose_arr');
     fclose(fileID);
 
 end
