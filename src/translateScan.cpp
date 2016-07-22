@@ -3,9 +3,6 @@
 #include <laser_geometry/laser_geometry.h>
 #include <tf/transform_broadcaster.h>
 #include <tf/transform_datatypes.h>
-#include <sensor_msgs/Imu.h>
-
-const double PI = 3.1415926;
 
 /**
  * Scan2PointTranslator
@@ -37,7 +34,7 @@ void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr 
           scan->header.frame_id,
           "/base_link",
           scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment),
-          ros::Duration(1.0))) {
+          ros::Duration(2.0))) {
           return;
       }
   } catch(tf::TransformException &ex) {

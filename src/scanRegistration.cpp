@@ -22,6 +22,7 @@
 #include <pcl/point_types.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/kdtree/kdtree_flann.h>
+#include <geometry_msgs/PoseStamped.h>
 
 const double PI = 3.1415926;
 const double rad2deg = 180 / PI;
@@ -36,7 +37,7 @@ double timeScanCur = 0;
 double timeScanLast = 0;
 
 int laserRotDir = 1;
-// float mean_sweep = 0;
+float mean_sweep = 0; 
 
 int skipFrameNum = 2;
 int skipFrameCount = 0;
@@ -49,18 +50,6 @@ sensor_msgs::PointCloud2 laserCloudLast2;
 
 ros::Publisher* pubLaserCloudExtreCurPointer;
 ros::Publisher* pubLaserCloudLastPointer;
-
-
-// debug
-std_msgs::Float32 imuRollerF32;
-std_msgs::Float32 imuPitcherF32;
-std_msgs::Float32 imuYawerF32;
-ros::Publisher* pubImuRollPointer;
-ros::Publisher* pubImuPitchPointer;
-ros::Publisher* pubImuYawPointer;
-// end debug
-
-
 
 int cloudSortInd[1200];
 int cloudNeighborPicked[1200];
@@ -199,8 +188,8 @@ void AccumulateIMUShift()
   float accZ = imuAccZ[imuPointerLast]; // linear_acceleration.z // cur: linear_acceleration.z
 
   // ROS_INFO_STREAM("accX, accY, accZ: (" << accX << ", " << accY << ", " << accZ << ")");
+  // ROS_INFO_STREAM("RPY: (" << roll << ", " << pitch << ", " << yaw << ")");
 
-  ////////////////////////// ORIGINAL //////////////////////////
   // roll is around z axis ??
   float x1 = cos(roll) * accX - sin(roll) * accY;
   float y1 = sin(roll) * accX + cos(roll) * accY;
@@ -215,11 +204,6 @@ void AccumulateIMUShift()
   accX =  cos(yaw) * x2 + sin(yaw) * z2;
   accY = y2;
   accZ = -sin(yaw) * x2 + cos(yaw) * z2;
-
-  ////////////////////////// END ORIGINAL //////////////////////////
-  // thus far we have the acceleration in x y and z
-
-  // ROS_INFO_STREAM("IMU ACC (X,Y,Z): (" << accX << ", " << accY << ", " << accZ << ")");
 
   int imuPointerBack = (imuPointerLast + imuQueLength - 1) % imuQueLength;
   double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
@@ -469,9 +453,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
   imuShiftFromStartYCur = imuShiftYCur - imuShiftYStart - imuVeloYStart * (timeLasted - timeStart);
   imuShiftFromStartZCur = imuShiftZCur - imuShiftZStart - imuVeloZStart * (timeLasted - timeStart);
 
-  // float befImuShiftFromStartXCur = imuShiftFromStartXCur;
-  // float befImuShiftFromStartYCur = imuShiftFromStartYCur;
-  // float befImuShiftFromStartZCur = imuShiftFromStartZCur;
+  //float befImuShiftFromStartXCur = imuShiftFromStartXCur;
+  //float befImuShiftFromStartYCur = imuShiftFromStartYCur;
+  //float befImuShiftFromStartZCur = imuShiftFromStartZCur;
   ShiftToStartIMU();
   //ROS_INFO("Imu Shift X: (bef, %f), (aft, %f); Y: (bef, %f), (aft, %f), Z: (bef, %f), (aft, %f)", befImuShiftFromStartXCur, imuShiftFromStartXCur, befImuShiftFromStartYCur, imuShiftFromStartYCur, befImuShiftFromStartZCur, imuShiftFromStartZCur);
 
@@ -511,7 +495,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
     laserCloud->points[i].s = diffX * diffX + diffY * diffY + diffZ * diffZ;
   }
   
-  float m = 0;
+  // float m = 0;
   for (int i = 5; i < cloudSize - 6; i++) {
     // calculate difference with the neighbour
     float diffX = laserCloud->points[i + 1].x - laserCloud->points[i].x;
@@ -520,7 +504,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
     float diff = diffX * diffX + diffY * diffY + diffZ * diffZ;
 
     // incremental average calculation of the diff
-    m = m + ((diff-m)/(cloudSize-12));
+    // m = m + ((diff-m)/(cloudSize-12));
     // if there's a big difference
     if (diff > 0.05) {
 
@@ -809,70 +793,13 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
     pubLaserCloudExtreCurPointer->publish(laserCloudExtreCur2);
     imuTrans->clear();
 
-    pubLaserCloudLastPointer->publish(laserCloudLast2); // this is tha last registration before the new sweep
+    pubLaserCloudLastPointer->publish(laserCloudLast2); // this is the last registration before the new sweep
 
-    // ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
+    ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
   }
   skipFrameCount++;
 }
 
-// the raw imu/data input published to imu/q_pose (short thick axis)
-// void imuHandlerIMU(const sensor_msgs::Imu::ConstPtr& imuIn)
-// {
-//   tf::Quaternion orientation;
-//   tf::quaternionMsgToTF(imuIn->orientation, orientation);
-//   // tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
-//   ////////////////////////////////////////
-
-//   geometry_msgs::PoseStamped imuVis;
-//   // publish the imu quaternion
-//   imuVis.pose.orientation.x = imuIn->orientation.x;
-//   imuVis.pose.orientation.y = imuIn->orientation.y;
-//   imuVis.pose.orientation.z = imuIn->orientation.z;
-//   imuVis.pose.orientation.w = imuIn->orientation.w;
-//   imuVis.pose.position.x = 0;
-//   imuVis.pose.position.y = 0;
-//   imuVis.pose.position.z = 0;
-
-  
-//   imuVis.header.stamp = imuIn->header.stamp;
-//   imuVis.header.frame_id = "/camera_init_2";
-//   pubImuVisPointer->publish(imuVis);
-// }
-
-// the translated microstrain
-// publshed to imu/q_pose_2 (long thin axis)
-// void imuHandlerMicro(const sensor_msgs::Imu::ConstPtr& imuIn2)
-// {
-//   tf::Quaternion orientation;
-//   tf::quaternionMsgToTF(imuIn2->orientation, orientation);
-//   // tf::Matrix3x3(orientation).getRPY(roll, pitch, yaw);
-//   ////////////////////////////////////////
-
-//   tf::Quaternion transformation_q;
-
-//   transformation_q.setRotation( tf::Vector3(0,1,0), -tfScalar(PI/2));
-
-//   tf::Quaternion parsed_orientation = transformation_q.operator*=(orientation);
-
-//   geometry_msgs::PoseStamped imuVis2;
-//   // publish the imu quaternion
-//   imuVis2.pose.orientation.x = parsed_orientation.x();
-//   imuVis2.pose.orientation.y = parsed_orientation.y();
-//   imuVis2.pose.orientation.z = parsed_orientation.z();
-//   imuVis2.pose.orientation.w = parsed_orientation.w();
-//   imuVis2.pose.position.x = 0;
-//   imuVis2.pose.position.y = 0;
-//   imuVis2.pose.position.z = 0;
-  
-//   imuVis2.header.stamp = imuIn2->header.stamp;
-//   imuVis2.header.frame_id = "/camera_init_2";
-//   pubImuVisPointer2->publish(imuVis2);
-// }
-
-/**
- * Receives the messages from the IMU
- */
 void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 {
   // get RPY
@@ -889,41 +816,71 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 
   geometry_msgs::PoseStamped imuVis;
   // publish the imu quaternion
-  imuVis.pose.orientation.x = parsed_orientation.x();
-  imuVis.pose.orientation.y = parsed_orientation.y();
-  imuVis.pose.orientation.z = parsed_orientation.z();
-  imuVis.pose.orientation.w = parsed_orientation.w();
+  imuVis.pose.orientation.x = imuIn->orientation.x;
+  imuVis.pose.orientation.y = imuIn->orientation.y;
+  imuVis.pose.orientation.z = imuIn->orientation.z;
+  imuVis.pose.orientation.w = imuIn->orientation.w;
   imuVis.pose.position.x = 0;
   imuVis.pose.position.y = 0;
   imuVis.pose.position.z = 0;
+
   
   imuVis.header.stamp = imuIn->header.stamp;
   imuVis.header.frame_id = "/camera_init_2";
   pubImuVisPointer->publish(imuVis);
 
+  
   tf::Matrix3x3(parsed_orientation).getRPY(roll, pitch, yaw);
 
-  int imuPointerBack = imuPointerLast; // initially -1
-  imuPointerLast = (imuPointerLast + 1) % imuQueLength; // the array pointer 0 - imuQueueLength (100 in MS case)
-  imuTime[imuPointerLast] = imuIn->header.stamp.toSec(); // the time the imu measurement was taken for each of the imuQueueLength (100) points
-  double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack]; // difference in time between the two imu measurement
+  int imuPointerBack = imuPointerLast;
+  imuPointerLast = (imuPointerLast + 1) % imuQueLength;
+  imuTime[imuPointerLast] = imuIn->header.stamp.toSec();
+  double timeDiff = imuTime[imuPointerLast] - imuTime[imuPointerBack];
 
   // if two consecutive measurement were taken within 0.1 seconds
   if (timeDiff < 0.1) {
 
     // imuAccuRoll += timeDiff * imuIn->angular_velocity.x;
     // imuAccuPitch += timeDiff * imuIn->angular_velocity.y;
-    // imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
-    
-    imuRoll[imuPointerLast] = yaw;
-    imuPitch[imuPointerLast] = roll;
-    imuYaw[imuPointerLast] = -pitch;
+    imuAccuYaw += timeDiff * imuIn->angular_velocity.z;
 
+    // imuRoll[imuPointerLast] = roll;
+    // imuPitch[imuPointerLast] = -pitch;
+    // imuYaw[imuPointerLast] = -yaw;
     // imuRoll[imuPointerLast] = imuAccuRoll;
     // imuPitch[imuPointerLast] = -imuAccuPitch;
     // imuYaw[imuPointerLast] = -imuAccuYaw;
 
-    // if there's monotonic IMU shift- accumulate it
+    imuRoll[imuPointerLast] = yaw;
+    imuPitch[imuPointerLast] = roll;
+    imuYaw[imuPointerLast] = -pitch;
+
+
+
+////////////////////////////
+  tf::Quaternion input_quat;
+
+  input_quat.setRPY(imuRoll[imuPointerLast] , imuPitch[imuPointerLast] , imuYaw[imuPointerLast] );
+  
+  // // ROS_INFO_STREAM(  input_quat.w() );
+
+  geometry_msgs::PoseStamped imuVis2;
+  // publish the imu quaternion
+  imuVis2.pose.orientation.x = input_quat.x();
+  imuVis2.pose.orientation.y = input_quat.y();
+  imuVis2.pose.orientation.z = input_quat.z();
+  imuVis2.pose.orientation.w = input_quat.w();
+  imuVis2.pose.position.x = 0;
+  imuVis2.pose.position.y = 0;
+  imuVis2.pose.position.z = 0;
+
+  
+  imuVis2.header.stamp = imuIn->header.stamp;
+  imuVis2.header.frame_id = "/camera_init_2";
+  pubImuVisPointer2->publish(imuVis2);
+
+////////////////////////////////
+
     // imuAccX[imuPointerLast] = -imuIn->linear_acceleration.y;
     // imuAccY[imuPointerLast] = -imuIn->linear_acceleration.z - 9.81;
     // imuAccZ[imuPointerLast] = imuIn->linear_acceleration.x;
@@ -939,13 +896,9 @@ int main(int argc, char** argv)
 
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
                                   ("/sync_scan_cloud_filtered", 2, laserCloudHandler);
-                                  
-  ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
-                           ("/imu/data", 10, imuHandler);
 
-  ros::Publisher pubImuRoll = nh.advertise<std_msgs::Float32> ("/roll", 5);
-  ros::Publisher pubImuPitch = nh.advertise<std_msgs::Float32> ("/pitch", 5);
-  ros::Publisher pubImuYaw = nh.advertise<std_msgs::Float32> ("/yaw", 5);
+  ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
+                                  ("/imu/data", 10, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
                                          ("/laser_cloud_extre_cur", 2);
@@ -995,10 +948,6 @@ int main(int argc, char** argv)
   pubLastPointPointer = &pubLastPoint;
   pubImuVisPointer = &pubImuVis;
   pubImuVisPointer2 = &pubImuVis2;
-
-  pubImuRollPointer = &pubImuRoll;
-  pubImuPitchPointer = &pubImuPitch;
-  pubImuYawPointer = &pubImuYaw;
 
   ros::spin();
 
