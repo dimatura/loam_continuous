@@ -1160,6 +1160,7 @@ int main(int argc, char** argv)
         pcl::toROSMsg(*laserCloudCornerLast + *laserCloudSurfLast, laserCloudLast2);
         laserCloudLast2.header.stamp = ros::Time().fromSec(timeLaserCloudLast);
         laserCloudLast2.header.frame_id = "/camera";
+        // ROS_INFO_STREAM("[Odometry] cloud last width: " << laserCloudLast2.width);
         pubLaserCloudLast2.publish(laserCloudLast2);
 
       } else {
@@ -1199,8 +1200,8 @@ int main(int argc, char** argv)
       laserOdometryTrans.setOrigin(tf::Vector3(tx, ty, tz));
       tfBroadcaster.sendTransform(laserOdometryTrans);
 
-      // ROS_INFO ("%f %f %f %f %f %f", transformSum[0], transformSum[1], transformSum[2], 
-      //                                transformSum[3], transformSum[4], transformSum[5]);
+      ROS_INFO ("%f %f %f %f %f %f", transformSum[0], transformSum[1], transformSum[2], 
+                                     transformSum[3], transformSum[4], transformSum[5]);
     }
 
     status = ros::ok();

@@ -747,7 +747,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
   *laserCloudLessExtreCur += *cornerPointsLessSharp;
   *laserCloudLessExtreCur += *surfPointsLessFlatDS;
 
-  ROS_INFO_STREAM("(corner sharp, surface flat, corner l, surface l, surface DS): (" << cornerPointsSharp->points.size() << ", " << surfPointsFlat->points.size() << ", " << cornerPointsLessSharp->points.size() << ", " <<  surfPointsLessFlat->points.size() << ", " << surfPointsLessFlatDS->points.size() << ")");
+  // ROS_INFO_STREAM("(corner sharp, surface flat, corner l, surface l, surface DS): (" << cornerPointsSharp->points.size() << ", " << surfPointsFlat->points.size() << ", " << cornerPointsLessSharp->points.size() << ", " <<  surfPointsLessFlat->points.size() << ", " << surfPointsLessFlatDS->points.size() << ")");
 
   laserCloudIn->clear();
   laserCloud->clear();
