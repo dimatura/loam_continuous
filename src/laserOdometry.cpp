@@ -458,13 +458,13 @@ int main(int argc, char** argv)
 
   // the rest of the sweep
   ros::Subscriber subLaserCloudExtreCur = nh.subscribe<sensor_msgs::PointCloud2> 
-                                          ("/laser_cloud_extre_cur", 2, laserCloudExtreCurHandler);
+                                          ("/laser_cloud_extre_cur", 20, laserCloudExtreCurHandler);
 
   // last registration before the new sweep
   ros::Subscriber subLaserCloudLast = nh.subscribe<sensor_msgs::PointCloud2> 
-                                      ("/laser_cloud_last", 2, laserCloudLastHandler);
+                                      ("/laser_cloud_last", 20, laserCloudLastHandler);
 
-  ros::Publisher pubLaserCloudLast2 = nh.advertise<sensor_msgs::PointCloud2> ("/laser_cloud_last_2", 2);
+  ros::Publisher pubLaserCloudLast2 = nh.advertise<sensor_msgs::PointCloud2> ("/laser_cloud_last_2", 20);
 
 
 
@@ -1060,7 +1060,7 @@ int main(int argc, char** argv)
           transform[5] += matX.at<float>(5, 0);
         } else {
 
-
+          ROS_INFO_STREAM(fabs(matX.at<float>(0, 0)) << fabs(matX.at<float>(1, 0)) << fabs(matX.at<float>(2, 0)) << fabs(matX.at<float>(3, 0)) << fabs(matX.at<float>(4, 0)) << fabs(matX.at<float>(5, 0)));
           // debug
           ROS_INFO ("Odometry update out of bound");
           // end debug

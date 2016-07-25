@@ -248,24 +248,24 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   ros::Subscriber subLaserCloudLast2 = nh.subscribe<sensor_msgs::PointCloud2> 
-                                       ("/laser_cloud_last_2", 2, laserCloudLastHandler);
+                                       ("/laser_cloud_last_2", 20, laserCloudLastHandler);
 
   ros::Subscriber subLaserOdometry = nh.subscribe<nav_msgs::Odometry> 
                                      ("/cam_to_init", 5, laserOdometryHandler);
 
   ros::Publisher pubLaserCloudSurround = nh.advertise<sensor_msgs::PointCloud2> 
-                                         ("/laser_cloud_surround", 1);
+                                         ("/laser_cloud_surround", 10);
 
 
 
   // debug
-  ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m1", 1);
+  ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m1", 10);
 
-  ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m2", 1);
+  ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m2", 10);
 
-  ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m3", 1);
+  ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m3", 10);
 
-  ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m4", 1);
+  ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m4", 10);
   // end debug
 
 

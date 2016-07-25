@@ -328,7 +328,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
   // ROS_INFO("Laser angle: %f", (laserAngle * rad2deg));
   bool newSweep = false;
-  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > 0.7) {
+  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > 2) {
     laserRotDir *= -1;
     newSweep = true;
     // ROS_INFO("New sweep!! Laser angle: %f", (laserAngle * rad2deg));
@@ -747,6 +747,8 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
   *laserCloudLessExtreCur += *cornerPointsLessSharp;
   *laserCloudLessExtreCur += *surfPointsLessFlatDS;
 
+  ROS_INFO_STREAM("(corner sharp, surface flat, corner l, surface l, surface DS): (" << cornerPointsSharp->points.size() << ", " << surfPointsFlat->points.size() << ", " << cornerPointsLessSharp->points.size() << ", " <<  surfPointsLessFlat->points.size() << ", " << surfPointsLessFlatDS->points.size() << ")");
+
   laserCloudIn->clear();
   laserCloud->clear();
   cornerPointsSharp->clear();
@@ -795,7 +797,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
     pubLaserCloudLastPointer->publish(laserCloudLast2); // this is the last registration before the new sweep
 
-    ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
+    // ROS_INFO ("%d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
   }
   skipFrameCount++;
 }
@@ -895,48 +897,48 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
-                                  ("/sync_scan_cloud_filtered", 2, laserCloudHandler);
+                                  ("/sync_scan_cloud_filtered", 20, laserCloudHandler);
 
   ros::Subscriber subImu = nh.subscribe<sensor_msgs::Imu> 
                                   ("/imu/data", 10, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
-                                         ("/laser_cloud_extre_cur", 2);
+                                         ("/laser_cloud_extre_cur", 20);
 
   // last registration before the new sweep
   ros::Publisher pubLaserCloudLast = nh.advertise<sensor_msgs::PointCloud2> 
-                                     ("/laser_cloud_last", 2);
+                                     ("/laser_cloud_last", 20);
 
   pubLaserCloudExtreCurPointer = &pubLaserCloudExtreCur;
   pubLaserCloudLastPointer = &pubLaserCloudLast;
 
   // debug purposes shows the corners and sharp areas of the current sweep of the lidar
   ros::Publisher pubCornerPointsSharp = nh.advertise<sensor_msgs::PointCloud2> 
-                                        ("/ms_cloud_sharp", 2);
+                                        ("/ms_cloud_sharp", 20);
 
   ros::Publisher pubCornerPointsLessSharp = nh.advertise<sensor_msgs::PointCloud2> 
-                                            ("/ms_cloud_less_sharp", 2);
+                                            ("/ms_cloud_less_sharp", 20);
 
   ros::Publisher pubSurfPointsFlat = nh.advertise<sensor_msgs::PointCloud2> 
-                                       ("/ms_cloud_flat", 2);
+                                       ("/ms_cloud_flat", 20);
 
   ros::Publisher pubSurfPointsLessFlat = nh.advertise<sensor_msgs::PointCloud2> 
-                                           ("/ms_cloud_less_flat", 2);
+                                           ("/ms_cloud_less_flat", 20);
 
   ros::Publisher pubImuTrans = nh.advertise<sensor_msgs::PointCloud2> ("/imu_trans", 5);
 
   // debug the laser angle
   ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 1000);
 
-  ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 2);
+  ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 20);
 
-  ros::Publisher pubLastPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/last_point", 2);
+  ros::Publisher pubLastPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/last_point", 20);
 
   // debug imu visualiser
   ros::Publisher pubImuVis = nh.advertise<geometry_msgs::PoseStamped> 
-                                         ("/imu/q_pose", 2);
+                                         ("/imu/q_pose", 20);
   ros::Publisher pubImuVis2 = nh.advertise<geometry_msgs::PoseStamped> 
-                                         ("/imu/q_pose_2", 2);
+                                         ("/imu/q_pose_2", 20);
 
   pubLaserAnglePointer = &pubLaserAngle;
   pubCornerPointsSharpPointer = &pubCornerPointsSharp;

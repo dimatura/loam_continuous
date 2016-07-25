@@ -24,8 +24,8 @@ class Scan2PointTranslator {
 };
 
 Scan2PointTranslator::Scan2PointTranslator() {
-    scan_sub = nh.subscribe<sensor_msgs::LaserScan> ("/lidar_scan", 2, &Scan2PointTranslator::scanCallback, this);
-    point_cloud_publisher = nh.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered", 2);
+    scan_sub = nh.subscribe<sensor_msgs::LaserScan> ("/lidar_scan", 20, &Scan2PointTranslator::scanCallback, this);
+    point_cloud_publisher = nh.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered", 20);
 }
 
 void Scan2PointTranslator::scanCallback( const sensor_msgs::LaserScan::ConstPtr &scan ) {
