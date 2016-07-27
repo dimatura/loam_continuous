@@ -259,13 +259,13 @@ int main(int argc, char** argv)
 
 
   // debug
-  ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m1", 10);
+  ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m1", 1);
 
-  ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m2", 10);
+  ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m2", 1);
 
-  ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m3", 10);
+  ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m3", 1);
 
-  ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m4", 10);
+  ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc_m4", 1);
   // end debug
 
 
@@ -826,7 +826,7 @@ int main(int argc, char** argv)
     }
 
     status = ros::ok();
-    cv::waitKey(10);
+    cv::waitKey(1);
   }
 
   return 0;

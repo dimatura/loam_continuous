@@ -328,7 +328,7 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
   // ROS_INFO("Laser angle: %f", (laserAngle * rad2deg));
   bool newSweep = false;
-  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > 2) {
+  if (laserAngle * laserRotDir < 0 && timeLasted - timeStart > 2.0) {
     laserRotDir *= -1;
     newSweep = true;
     // ROS_INFO("New sweep!! Laser angle: %f", (laserAngle * rad2deg));

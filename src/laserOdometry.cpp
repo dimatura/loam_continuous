@@ -1215,7 +1215,7 @@ int main(int argc, char** argv)
     }
 
     status = ros::ok();
-    cv::waitKey(10);
+    cv::waitKey(1);
   }
 
   return 0;
