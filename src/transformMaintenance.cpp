@@ -205,15 +205,15 @@ int main(int argc, char** argv)
   ros::NodeHandle nh;
 
   ros::Subscriber subLaserOdometry = nh.subscribe<nav_msgs::Odometry>
-                                     ("/cam_to_init", 5, laserOdometryHandler);
+                                     ("/cam_to_init", 10, laserOdometryHandler);
 
   ros::Subscriber subOdomBefMapped = nh.subscribe<nav_msgs::Odometry>
-                                     ("/bef_mapped_to_init_2", 5, odomBefMappedHandler);
+                                     ("/bef_mapped_to_init_2", 10, odomBefMappedHandler);
 
   ros::Subscriber subOdomAftMapped = nh.subscribe<nav_msgs::Odometry>
-                                     ("/aft_mapped_to_init_2", 5, odomAftMappedHandler);
+                                     ("/aft_mapped_to_init_2", 10, odomAftMappedHandler);
 
-  ros::Publisher pubLaserOdometry2 = nh.advertise<nav_msgs::Odometry> ("/cam_to_init_2", 5);
+  ros::Publisher pubLaserOdometry2 = nh.advertise<nav_msgs::Odometry> ("/cam_to_init_2", 10);
   pubLaserOdometry2Pointer = &pubLaserOdometry2;
   laserOdometry2.header.frame_id = "/camera_init_2";
   laserOdometry2.child_frame_id = "/camera";

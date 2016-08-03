@@ -138,7 +138,9 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(loam_multisense_node src/loam_multisense_node.cpp)
+add_executable(playBag_ms src/playBag.cpp)
 add_executable(translateScan_ms src/translateScan.cpp)
+# add_executable(syncInput_ms src/synchroniseInput.cpp)
 add_executable(scanRegistration_ms src/scanRegistration.cpp)
 add_executable(laserOdometry_ms src/laserOdometry.cpp)
 add_executable(laserMapping_ms src/laserMapping.cpp)
@@ -157,6 +159,8 @@ target_link_libraries(laserOdometry_ms ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_
 target_link_libraries(laserMapping_ms ${catkin_LIBRARIES} ${OpenCV_LIBS} ${PCL_LIBRARIES})
 target_link_libraries(transformMaintenance_ms ${catkin_LIBRARIES} ${PCL_LIBRARIES})
 target_link_libraries(translateScan_ms ${catkin_LIBRARIES})
+target_link_libraries(playBag_ms ${catkin_LIBRARIES})
+# target_link_libraries(syncInput_ms ${catkin_LIBRARIES})
 #############
 ## Install ##
 #############
