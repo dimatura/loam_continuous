@@ -10,8 +10,6 @@
 #include <ros/package.h>
 #include <tf2_msgs/TFMessage.h>
 
-
-
 int main(int argc, char **argv) {
 
   ros::init(argc, argv, "publish_scene");
@@ -22,11 +20,7 @@ int main(int argc, char **argv) {
   
   nh.getParam("/rosbag", rosbag);
 
-  usleep(100); // before we start
   ROS_INFO_STREAM("Start playing " << rosbag);
-  usleep(100); // before we start
-
-
 
   ros::Publisher imu_pub = nh.advertise<sensor_msgs::Imu>("/imu/data", 100);
   ros::Publisher cloud_pub = nh.advertise<sensor_msgs::PointCloud2>("/sync_scan_cloud_filtered", 40);
@@ -57,10 +51,8 @@ int main(int argc, char **argv) {
       if (m.getTopic() == imu_topic) 
       {
         sensor_msgs::Imu::ConstPtr imu_ptr = m.instantiate<sensor_msgs::Imu>();
-        if (imu_ptr != NULL) {
+        if (imu_ptr != NULL)
           imu_pub.publish(*imu_ptr);
-
-        }
       }
 
       if (m.getTopic() == cloud_topic) 

@@ -28,11 +28,12 @@ const double rad2deg = 180 / PI;
 const double deg2rad = PI / 180;
 
 bool systemInited = false;
-// debug gt
-// float mean_iterNum = 0;
-// int currIter = 0;
-// std_msgs::Float32 s_param;
-// std_msgs::Float32 iterNum_param;
+
+
+float mean_iterNum = 0;
+int currIter = 0;
+std_msgs::Float32 s_param;
+std_msgs::Float32 iterNum_param;
 
 double initTime;
 double timeLasted;
@@ -49,32 +50,28 @@ bool newLaserCloudLast = false;
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreCur(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreOri(new pcl::PointCloud<pcl::PointXYZHSV>());
-
-
-// debug
-// pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreSel(new pcl::PointCloud<pcl::PointXYZHSV>());
-// pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreUnsel(new pcl::PointCloud<pcl::PointXYZHSV>());
-// pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreProj(new pcl::PointCloud<pcl::PointXYZHSV>());
-// end debug
-
-
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreSel(new pcl::PointCloud<pcl::PointXYZHSV>());
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreUnsel(new pcl::PointCloud<pcl::PointXYZHSV>());
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreProj(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudCornerLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSurfLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudCornerLLast(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSurfLLast(new pcl::PointCloud<pcl::PointXYZHSV>());
-
-
-// debug
-// pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSel(new pcl::PointCloud<pcl::PointXYZHSV>());
-
-
- 
+pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudSel(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr coeffSel(new pcl::PointCloud<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeCornerLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeSurfLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeCornerLLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
 pcl::KdTreeFLANN<pcl::PointXYZHSV>::Ptr kdtreeSurfLLast(new pcl::KdTreeFLANN<pcl::PointXYZHSV>());
+ros::Publisher pub1;
+ros::Publisher pub2;
+ros::Publisher pub3;
+ros::Publisher pub4;
+ros::Publisher pub5;
+ros::Publisher pub6;
+ros::Publisher pubSParam;
+ros::Publisher pubIterNumParam;
 
 float transform[6] = {0};
 float transformRec[6] = {0};
@@ -91,6 +88,7 @@ float imuShiftFromStartXLast = 0, imuShiftFromStartYLast = 0, imuShiftFromStartZ
 float imuVeloFromStartXLast = 0, imuVeloFromStartYLast = 0, imuVeloFromStartZLast = 0;
 
 bool imuInited = false;
+bool debug_mode = false;
 
 /**
  * Resets the transformation (beginning of sweep)
@@ -464,6 +462,14 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "laserOdometry");
   ros::NodeHandle nh;
 
+  std::string debug;
+  // debug mode
+  if(nh.getParam("/debug", debug)) {
+    if(debug.compare("false") != 0) {
+      debug_mode = true;
+    }
+  }
+
   // the rest of the sweep
   ros::Subscriber subLaserCloudExtreCur = nh.subscribe<sensor_msgs::PointCloud2> 
                                           ("/laser_cloud_extre_cur", 4, laserCloudExtreCurHandler);
@@ -474,26 +480,16 @@ int main(int argc, char** argv)
 
   ros::Publisher pubLaserCloudLast2 = nh.advertise<sensor_msgs::PointCloud2> ("/laser_cloud_last_2", 4);
 
-
-
-  // debug
-  // ros::Publisher pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc1", 1);
-
-  // ros::Publisher pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc2", 1);
-
-  // ros::Publisher pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc3", 1);
-
-  // ros::Publisher pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc4", 1);
-
-  // ros::Publisher pub5 = nh.advertise<sensor_msgs::PointCloud2> ("/pc5", 1);
-
-  // ros::Publisher pub6 = nh.advertise<sensor_msgs::PointCloud2> ("/pc6", 1);
-
-  // debug s parameter
-  // ros::Publisher pubSParam = nh.advertise<std_msgs::Float32>("/s_param", 1000);
-  // debug iterNum param
-  // ros::Publisher pubIterNumParam = nh.advertise<std_msgs::Float32>("/iter_num", 1000);
-
+  if(debug_mode) {
+    pub1 = nh.advertise<sensor_msgs::PointCloud2> ("/pc1", 1);
+    pub2 = nh.advertise<sensor_msgs::PointCloud2> ("/pc2", 1);
+    pub3 = nh.advertise<sensor_msgs::PointCloud2> ("/pc3", 1);
+    pub4 = nh.advertise<sensor_msgs::PointCloud2> ("/pc4", 1);
+    pub5 = nh.advertise<sensor_msgs::PointCloud2> ("/pc5", 1);
+    pub6 = nh.advertise<sensor_msgs::PointCloud2> ("/pc6", 1);
+    pubSParam = nh.advertise<std_msgs::Float32>("/s_param", 1000);
+    pubIterNumParam = nh.advertise<std_msgs::Float32>("/iter_num", 1000);
+  }
 
   ros::Publisher pubLaserOdometry = nh.advertise<nav_msgs::Odometry> ("/cam_to_init", 10);
   nav_msgs::Odometry laserOdometry;
@@ -624,17 +620,13 @@ int main(int argc, char** argv)
 
         laserCloudExtreOri->clear(); // empty the original laser cloud
 
-
-
-        // debug
-        // laserCloudExtreSel->clear();
-        // laserCloudExtreUnsel->clear();
-        // laserCloudExtreProj->clear();
-        // laserCloudSel->clear();
-        // end debug
+        if(debug_mode) {
+          laserCloudExtreSel->clear();
+          laserCloudExtreUnsel->clear();
+          laserCloudExtreProj->clear();
+          laserCloudSel->clear();
+        }
         
-
-
         coeffSel->clear();
 
         // check if a point is selected
@@ -808,17 +800,14 @@ int main(int argc, char** argv)
 
               if (s > 0.2 || iterNum < 30) {
                 laserCloudExtreOri->push_back(extreOri);
+                if(debug_mode) {
 
-
-                // debug
-                // laserCloudExtreSel->push_back(extreSel);
-                // laserCloudExtreProj->push_back(extreProj);
-                // laserCloudSel->push_back(tripod1);
-                // laserCloudSel->push_back(tripod2);
-                // laserCloudSel->push_back(tripod3);
-                // end debug
-
-
+                  laserCloudExtreSel->push_back(extreSel);
+                  laserCloudExtreProj->push_back(extreProj);
+                  laserCloudSel->push_back(tripod1);
+                  laserCloudSel->push_back(tripod2);
+                  laserCloudSel->push_back(tripod3);
+                }
 
                 coeffSel->push_back(coeff);
 
@@ -828,14 +817,9 @@ int main(int argc, char** argv)
                   pointSelInd[3 * i + 2] = minPointInd3;
                 }
               } else {
-
-
-                // debug
-                // laserCloudExtreUnsel->push_back(extreSel);
-                // end debug
-
-
-
+                if(debug_mode) {
+                  laserCloudExtreUnsel->push_back(extreSel);
+                }
               }
             }
           } else if (fabs(extreOri.v - 2) < 0.05) {
@@ -953,15 +937,13 @@ int main(int argc, char** argv)
 
               if (s > 0.4) {
                 laserCloudExtreOri->push_back(extreOri);
-
-
-                // debug
-                // laserCloudExtreSel->push_back(extreSel);
-                // laserCloudExtreProj->push_back(extreProj);
-                // laserCloudSel->push_back(tripod1);
-                // laserCloudSel->push_back(tripod2);
-                // end debug
-
+                
+                if(debug_mode) {
+                  laserCloudExtreSel->push_back(extreSel);
+                  laserCloudExtreProj->push_back(extreProj);
+                  laserCloudSel->push_back(tripod1);
+                  laserCloudSel->push_back(tripod2);
+                }
 
                 coeffSel->push_back(coeff);
 
@@ -970,13 +952,9 @@ int main(int argc, char** argv)
                   pointSelInd[3 * i + 1] = minPointInd2;
                 }
               } else {
-
-
-                // debug
-                // laserCloudExtreUnsel->push_back(extreSel);
-                // end debug
-
-
+                if(debug_mode) {
+                  laserCloudExtreUnsel->push_back(extreSel);
+                }
               }
             }
           }
@@ -1073,57 +1051,49 @@ int main(int argc, char** argv)
           transform[4] += matX.at<float>(4, 0);
           transform[5] += matX.at<float>(5, 0);
         } else {
-
-          // ROS_INFO_STREAM(fabs(matX.at<float>(0, 0)) << fabs(matX.at<float>(1, 0)) << fabs(matX.at<float>(2, 0)) << fabs(matX.at<float>(3, 0)) << fabs(matX.at<float>(4, 0)) << fabs(matX.at<float>(5, 0)));
-          // debug
-          // ROS_INFO ("Odometry update out of bound");
-          // end debug
-
-
+          if(debug_mode) {
+            ROS_INFO_STREAM(fabs(matX.at<float>(0, 0)) << fabs(matX.at<float>(1, 0)) << fabs(matX.at<float>(2, 0)) << fabs(matX.at<float>(3, 0)) << fabs(matX.at<float>(4, 0)) << fabs(matX.at<float>(5, 0)));
+            ROS_INFO ("Odometry update out of bound");
+          }
         }
       }
+      if(debug_mode) {
+        sensor_msgs::PointCloud2 pc12;
+        pcl::toROSMsg(*laserCloudCornerPtr, pc12);
+        pc12.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc12.header.frame_id = "/camera";
+        pub1.publish(pc12);
 
+        sensor_msgs::PointCloud2 pc22;
+        pcl::toROSMsg(*laserCloudSurfPtr, pc22);
+        pc22.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc22.header.frame_id = "/camera";
+        pub2.publish(pc22);
 
+        sensor_msgs::PointCloud2 pc32;
+        pcl::toROSMsg(*laserCloudExtreSel, pc32);
+        pc32.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc32.header.frame_id = "/camera";
+        pub3.publish(pc32);
 
-      // debug
-      // sensor_msgs::PointCloud2 pc12;
-      // pcl::toROSMsg(*laserCloudCornerPtr, pc12);
-      // pc12.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc12.header.frame_id = "/camera";
-      // pub1.publish(pc12);
+        sensor_msgs::PointCloud2 pc42;
+        pcl::toROSMsg(*laserCloudExtreUnsel, pc42);
+        pc42.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc42.header.frame_id = "/camera";
+        pub4.publish(pc42);
 
-      // sensor_msgs::PointCloud2 pc22;
-      // pcl::toROSMsg(*laserCloudSurfPtr, pc22);
-      // pc22.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc22.header.frame_id = "/camera";
-      // pub2.publish(pc22);
+        sensor_msgs::PointCloud2 pc52;
+        pcl::toROSMsg(*laserCloudExtreProj, pc52);
+        pc52.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc52.header.frame_id = "/camera";
+        pub5.publish(pc52);
 
-      // sensor_msgs::PointCloud2 pc32;
-      // pcl::toROSMsg(*laserCloudExtreSel, pc32);
-      // pc32.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc32.header.frame_id = "/camera";
-      // pub3.publish(pc32);
-
-      // sensor_msgs::PointCloud2 pc42;
-      // pcl::toROSMsg(*laserCloudExtreUnsel, pc42);
-      // pc42.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc42.header.frame_id = "/camera";
-      // pub4.publish(pc42);
-
-      // sensor_msgs::PointCloud2 pc52;
-      // pcl::toROSMsg(*laserCloudExtreProj, pc52);
-      // pc52.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc52.header.frame_id = "/camera";
-      // pub5.publish(pc52);
-
-      // sensor_msgs::PointCloud2 pc62;
-      // pcl::toROSMsg(*laserCloudSel, pc62);
-      // pc62.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
-      // pc62.header.frame_id = "/camera";
-      // pub6.publish(pc62);
-      // end debug
-
-
+        sensor_msgs::PointCloud2 pc62;
+        pcl::toROSMsg(*laserCloudSel, pc62);
+        pc62.header.stamp = ros::Time().fromSec(timeLaserCloudExtreCur);
+        pc62.header.frame_id = "/camera";
+        pub6.publish(pc62);
+      }
     }
 
     if (newLaserPoints) {
@@ -1220,7 +1190,6 @@ int main(int argc, char** argv)
                                      transformSum[3], transformSum[4], transformSum[5]);
     }
 
-    // ROS_INFO_STREAM("END ODOMETRY MAIN: " << timeLasted);
     status = ros::ok();
     cv::waitKey(10);
   }

@@ -9,6 +9,12 @@
 	<!-- rosbag -->
 	<arg name="rosbag" default="/home/edbot/logs/husky/2016-07-13-outdoor-george-square-west/run1/filtered/filtered_run1_fixed.bag" />
 	<param name="rosbag" type="string" value="$(arg rosbag)" />
+	<!-- write the pose -->
+	<arg name="pose" default="false"/>
+	<param name="pose" type="string" value="$(arg pose)" />
+	<!-- debug -->
+	<arg name="debug" default="false"/>
+	<param name="debug" type="string" value="$(arg debug)" />
 	
 	<!-- The multisense urdf -->
 	<!-- <param name="robot_description" textfile="$(find multisense_description)/urdf/multisenseSL.urdf" /> -->
