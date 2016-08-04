@@ -1,0 +1,30 @@
+<launch>
+
+	<!-- sync timestamps -->
+	<!-- <param name="use_sim_time" value="true" /> -->
+
+	<!-- rviz -->
+	<arg name="rviz" default="true" />
+
+	<!-- rosbag -->
+	<arg name="rosbag" default="/home/edbot/logs/husky/2016-07-13-outdoor-george-square-west/run1/filtered/filtered_run1_fixed.bag" />
+	<param name="rosbag" type="string" value="$(arg rosbag)" />
+	<!-- write the pose -->
+	<arg name="pose" default="false"/>
+	<param name="pose" type="string" value="$(arg pose)" />
+	<!-- debug -->
+	<arg name="debug" default="false"/>
+	<param name="debug" type="string" value="$(arg debug)" />
+	
+	<!-- The multisense urdf -->
+	<!-- <param name="robot_description" textfile="$(find multisense_description)/urdf/multisenseSL.urdf" /> -->
+	
+	<node pkg="loam_multisense" type="playBag_ms" name="playBag_ms" output="screen"/>
+	<node pkg="loam_multisense" type="scanRegistration_ms" name="scanRegistration_ms" output="screen"/>
+	<node pkg="loam_multisense" type="laserOdometry_ms" name="laserOdometry_ms" output="screen"/>
+	<node pkg="loam_multisense" type="laserMapping_ms" name="laserMapping_ms" output="screen"/>
+	<node pkg="loam_multisense" type="transformMaintenance_ms" name="transformMaintenance_ms" output="screen"/>
+	<group if="$(arg rviz)">
+		<node launch-prefix="nice" pkg="rviz" type="rviz" name="rviz" args="-d $(find loam_multisense)/rviz_cfg/loam_continuous.rviz"/>
+	</group>
+</launch>

@@ -1,0 +1,9 @@
+<launch>
+	<remap from="scan" to="lidar_scan"/>
+    <node pkg="laser_assembler" type="laser_scan_assembler" output="screen"  name="laser_scan_assembler">
+    <param name="tf_cache_time_secs" type="double" value="1.0" />
+    <param name="max_scans" type="int" value="4000000" />
+    <param name="ignore_laser_skew" type="bool" value="true" />
+    <param name="fixed_frame" type="string" value="/base_link" />
+  </node>
+</launch>
