@@ -3,17 +3,17 @@
 	<!-- sync timestamps -->
 	<!-- <param name="use_sim_time" value="true" /> -->
 
+	<!-- rviz -->
 	<arg name="rviz" default="true" />
+
+	<!-- rosbag -->
+	<arg name="rosbag" default="/home/edbot/logs/husky/2016-07-13-outdoor-george-square-west/run1/filtered/filtered_run1_fixed.bag" />
+	<param name="rosbag" type="string" value="$(arg rosbag)" />
+	
 	<!-- The multisense urdf -->
 	<!-- <param name="robot_description" textfile="$(find multisense_description)/urdf/multisenseSL.urdf" /> -->
-
-	<node pkg="loam_multisense" type="translateScan_ms" name="translateScan_ms" output="screen"/>
-	<!-- <node pkg="loam_multisense" type="syncInput_ms" name="syncInput_ms" output="screen"/> -->
-
-	<!-- bag play -->
-	<!-- <node pkg="loam_multisense" type="playBag_ms" name="playBag_ms" output="screen"/> -->
 	
-
+	<node pkg="loam_multisense" type="playBag_ms" name="playBag_ms" output="screen"/>
 	<node pkg="loam_multisense" type="scanRegistration_ms" name="scanRegistration_ms" output="screen"/>
 	<node pkg="loam_multisense" type="laserOdometry_ms" name="laserOdometry_ms" output="screen"/>
 	<node pkg="loam_multisense" type="laserMapping_ms" name="laserMapping_ms" output="screen"/>

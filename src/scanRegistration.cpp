@@ -4,9 +4,11 @@
 #include <stdlib.h>
 #include <ros/ros.h>
 
+#include <laser_geometry/laser_geometry.h>
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <sensor_msgs/LaserScan.h>
 #include <std_msgs/Float32.h>
 
 #include <tf/transform_datatypes.h>
@@ -40,7 +42,7 @@ double timeScanLast = 0;
 int laserRotDir = 1;
 float mean_sweep = 0; 
 
-int skipFrameNum = 2;
+int skipFrameNum = 5;
 int skipFrameCount = 0;
 
 pcl::PointCloud<pcl::PointXYZHSV>::Ptr laserCloudExtreCur(new pcl::PointCloud<pcl::PointXYZHSV>());
@@ -95,17 +97,23 @@ double imuAccuPitch = 0;
 double imuAccuYaw = 0;
 
 // debug purpose publishers
-ros::Publisher* pubCornerPointsSharpPointer;
-ros::Publisher* pubCornerPointsLessSharpPointer;
-ros::Publisher* pubSurfPointsFlatPointer;
-ros::Publisher* pubSurfPointsLessFlatPointer;
-ros::Publisher* pubImuTransPointer;
-ros::Publisher* pubLaserAnglePointer;
-std_msgs::Float32 laserAngle2;
-ros::Publisher* pubFirstPointPointer;
-ros::Publisher* pubLastPointPointer;
-ros::Publisher* pubImuVisPointer;
-ros::Publisher* pubImuVisPointer2;
+// ros::Publisher* pubCornerPointsSharpPointer;
+// ros::Publisher* pubCornerPointsLessSharpPointer;
+// ros::Publisher* pubSurfPointsFlatPointer;
+// ros::Publisher* pubSurfPointsLessFlatPointer;
+// ros::Publisher* pubImuTransPointer;
+// ros::Publisher* pubLaserAnglePointer;
+// std_msgs::Float32 laserAngle2;
+// ros::Publisher* pubFirstPointPointer;
+// ros::Publisher* pubLastPointPointer;
+// ros::Publisher* pubImuVisPointer;
+// ros::Publisher* pubImuVisPointer2;
+// end debug
+
+// transfer laserscan to pointcloud2
+tf::TransformListener *listener_pointer;
+// laser
+laser_geometry::LaserProjection lp;
 
 void ShiftToStartIMU()
 {
@@ -228,43 +236,23 @@ void AccumulateIMUShift()
   }
 }
 
-void laserScanHandler(const sensor_msgs::LaserScanConstPtr& laserScanIn) {
-  try {
-      if(!listener.waitForTransform(
-          scan->header.frame_id,
-          "/base_link",
-          scan->header.stamp + ros::Duration().fromSec(scan->ranges.size()*scan->time_increment),
-          ros::Duration(1.0))) {
-          ROS_INFO_STREAM("SKIPPED " << scan->header.seq);
-          return;
-      }
-  } catch(tf::TransformException &ex) {
-          ROS_ERROR("%s", ex.what());
-          ros::Duration(1.0).sleep();
-          return;
-  }
-   
-  sensor_msgs::PointCloud2 cloud;
-  lp.transformLaserScanToPointCloud( "/base_link", *scan, cloud, listener);
-}
-
 /**
  * The message from the point cloud go here.
  */
-void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
+void laserCloudHandler(sensor_msgs::PointCloud2 laserCloudIn2)
 {
   // ROS_INFO_STREAM("Handler initiated: " << ros::Time::now());
   if (!systemInited) {
-    initTime = laserCloudIn2->header.stamp.toSec(); // initialize the start of the point cloud
+    initTime = laserCloudIn2.header.stamp.toSec(); // initialize the start of the point cloud
     imuPointerFront = (imuPointerLast + 1) % imuQueLength;
     systemInited = true;
   }
 
   timeScanLast = timeScanCur; // initially 0
-  timeScanCur = laserCloudIn2->header.stamp.toSec(); // timestamp of measurement
+  timeScanCur = laserCloudIn2.header.stamp.toSec(); // timestamp of measurement
   timeLasted = timeScanCur - initTime; // first measurement is 0, then record the time from the very first measurements (system init)
   pcl::PointCloud<pcl::PointXYZ>::Ptr laserCloudIn(new pcl::PointCloud<pcl::PointXYZ>()); // PointXYZ - Euclidean xyz coordinates
-  pcl::fromROSMsg(*laserCloudIn2, *laserCloudIn); // convert from PointCloud2 to PointCloud
+  pcl::fromROSMsg(laserCloudIn2, *laserCloudIn); // convert from PointCloud2 to PointCloud
   int cloudInSize = laserCloudIn->points.size();
   // ROS_INFO_STREAM("cloudInSize: " << cloudInSize);
 
@@ -316,27 +304,27 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
   // ROS_INFO_STREAM("Cloud size: " << cloudSize);
   // ROS_INFO_STREAM("last: " << laserPointLast);
   // ROS_INFO_STREAM("first: " << laserPointFirst);
-
+  
   // push the first point to its own pointcloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr laserFirstPointCloud(new pcl::PointCloud<pcl::PointXYZ>());
-  laserFirstPointCloud->push_back(laserPointFirst);
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr laserFirstPointCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  // laserFirstPointCloud->push_back(laserPointFirst);
 
-  sensor_msgs::PointCloud2 laserPointFirstCloud2;
-  pcl::toROSMsg(*laserFirstPointCloud, laserPointFirstCloud2);
-  laserPointFirstCloud2.header.stamp = laserCloudIn2->header.stamp;
-  laserPointFirstCloud2.header.frame_id = "/camera";
-  pubFirstPointPointer->publish(laserPointFirstCloud2);
+  // sensor_msgs::PointCloud2 laserPointFirstCloud2;
+  // pcl::toROSMsg(*laserFirstPointCloud, laserPointFirstCloud2);
+  // laserPointFirstCloud2.header.stamp = laserCloudIn2.header.stamp;
+  // laserPointFirstCloud2.header.frame_id = "/camera";
+  // pubFirstPointPointer->publish(laserPointFirstCloud2);
 
-  // and the last point to its own pointcloud
-  pcl::PointCloud<pcl::PointXYZ>::Ptr laserLastPointCloud(new pcl::PointCloud<pcl::PointXYZ>());
-  laserLastPointCloud->push_back(laserPointLast);
+  // // and the last point to its own pointcloud
+  // pcl::PointCloud<pcl::PointXYZ>::Ptr laserLastPointCloud(new pcl::PointCloud<pcl::PointXYZ>());
+  // laserLastPointCloud->push_back(laserPointLast);
 
-  sensor_msgs::PointCloud2 laserPointLastCloud2;
-  pcl::toROSMsg(*laserLastPointCloud, laserPointLastCloud2);
-  laserPointLastCloud2.header.stamp = laserCloudIn2->header.stamp;
-  laserPointLastCloud2.header.frame_id = "/camera";
-  pubLastPointPointer->publish(laserPointLastCloud2);
-
+  // sensor_msgs::PointCloud2 laserPointLastCloud2;
+  // pcl::toROSMsg(*laserLastPointCloud, laserPointLastCloud2);
+  // laserPointLastCloud2.header.stamp = laserCloudIn2.header.stamp;
+  // laserPointLastCloud2.header.frame_id = "/camera";
+  // pubLastPointPointer->publish(laserPointLastCloud2);
+  // end debug
 
   // the angle of the laser
   // atan2(x,y) - angle b/w two coordinates x, y 
@@ -345,8 +333,9 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
   // DEBUG purpose
   // publish the laser angle as a channel to be plotted
-  laserAngle2.data = laserAngle*rad2deg;
-  pubLaserAnglePointer->publish(laserAngle2);
+  // laserAngle2.data = laserAngle*rad2deg;
+  // pubLaserAnglePointer->publish(laserAngle2);
+  // end debug
 
   // ROS_INFO("Laser angle: %f", (laserAngle * rad2deg));
   bool newSweep = false;
@@ -740,29 +729,30 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
   // DEBUG purpose
   // publish only the corner/flat points
-  sensor_msgs::PointCloud2 cornerPointsSharp2;
-  pcl::toROSMsg(*cornerPointsSharp, cornerPointsSharp2);
-  cornerPointsSharp2.header.stamp = laserCloudIn2->header.stamp;
-  cornerPointsSharp2.header.frame_id = "/camera";
-  pubCornerPointsSharpPointer->publish(cornerPointsSharp2);
+  // sensor_msgs::PointCloud2 cornerPointsSharp2;
+  // pcl::toROSMsg(*cornerPointsSharp, cornerPointsSharp2);
+  // cornerPointsSharp2.header.stamp = laserCloudIn2.header.stamp;
+  // cornerPointsSharp2.header.frame_id = "/camera";
+  // pubCornerPointsSharpPointer->publish(cornerPointsSharp2);
 
-  sensor_msgs::PointCloud2 cornerPointsLessSharp2;
-  pcl::toROSMsg(*cornerPointsLessSharp, cornerPointsLessSharp2);
-  cornerPointsLessSharp2.header.stamp = laserCloudIn2->header.stamp;
-  cornerPointsLessSharp2.header.frame_id = "/camera";
-  pubCornerPointsLessSharpPointer->publish(cornerPointsLessSharp2);
+  // sensor_msgs::PointCloud2 cornerPointsLessSharp2;
+  // pcl::toROSMsg(*cornerPointsLessSharp, cornerPointsLessSharp2);
+  // cornerPointsLessSharp2.header.stamp = laserCloudIn2.header.stamp;
+  // cornerPointsLessSharp2.header.frame_id = "/camera";
+  // pubCornerPointsLessSharpPointer->publish(cornerPointsLessSharp2);
 
-  sensor_msgs::PointCloud2 surfPointsFlat2;
-  pcl::toROSMsg(*surfPointsFlat, surfPointsFlat2);
-  surfPointsFlat2.header.stamp = laserCloudIn2->header.stamp;
-  surfPointsFlat2.header.frame_id = "/camera";
-  pubSurfPointsFlatPointer->publish(surfPointsFlat2);
+  // sensor_msgs::PointCloud2 surfPointsFlat2;
+  // pcl::toROSMsg(*surfPointsFlat, surfPointsFlat2);
+  // surfPointsFlat2.header.stamp = laserCloudIn2.header.stamp;
+  // surfPointsFlat2.header.frame_id = "/camera";
+  // pubSurfPointsFlatPointer->publish(surfPointsFlat2);
 
-  sensor_msgs::PointCloud2 surfPointsLessFlat2;
-  pcl::toROSMsg(*surfPointsLessFlat, surfPointsLessFlat2);
-  surfPointsLessFlat2.header.stamp = laserCloudIn2->header.stamp;
-  surfPointsLessFlat2.header.frame_id = "/camera";
-  pubSurfPointsLessFlatPointer->publish(surfPointsLessFlat2);
+  // sensor_msgs::PointCloud2 surfPointsLessFlat2;
+  // pcl::toROSMsg(*surfPointsLessFlat, surfPointsLessFlat2);
+  // surfPointsLessFlat2.header.stamp = laserCloudIn2.header.stamp;
+  // surfPointsLessFlat2.header.frame_id = "/camera";
+  // pubSurfPointsLessFlatPointer->publish(surfPointsLessFlat2);
+  // end debug
 
   *laserCloudExtreCur += *cornerPointsSharp;
   *laserCloudExtreCur += *surfPointsFlat;
@@ -803,12 +793,14 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
     imuTrans->points[3].z = imuVeloFromStartZCur;
     imuTrans->points[3].v = 13;
 
+    // debug
     // publish only the imu translation
-    sensor_msgs::PointCloud2 imuTrans2;
-    pcl::toROSMsg(*imuTrans, imuTrans2);
-    imuTrans2.header.stamp = laserCloudIn2->header.stamp;
-    imuTrans2.header.frame_id = "/camera";
-    pubImuTransPointer->publish(imuTrans2);
+    // sensor_msgs::PointCloud2 imuTrans2;
+    // pcl::toROSMsg(*imuTrans, imuTrans2);
+    // imuTrans2.header.stamp = laserCloudIn2.header.stamp;
+    // imuTrans2.header.frame_id = "/camera";
+    // pubImuTransPointer->publish(imuTrans2);
+    // end debug
 
     sensor_msgs::PointCloud2 laserCloudExtreCur2;
     pcl::toROSMsg(*laserCloudExtreCur + *imuTrans, laserCloudExtreCur2);
@@ -819,9 +811,30 @@ void laserCloudHandler(const sensor_msgs::PointCloud2ConstPtr& laserCloudIn2)
 
     pubLaserCloudLastPointer->publish(laserCloudLast2); // this is the last registration before the new sweep
 
-    ROS_INFO ("[REGISTRATION] %d %d", laserCloudLast2.width, laserCloudExtreCur2.width);
+    ROS_INFO ("[REGISTRATION] (pc so far, pc this scan): (%d, %d)", laserCloudLast2.width, laserCloudExtreCur2.width);
   }
   skipFrameCount++;
+}
+
+void laserScanHandler(const sensor_msgs::LaserScanConstPtr& laserScanIn) {
+  try {
+      if(!listener_pointer->waitForTransform(
+          laserScanIn->header.frame_id,
+          "/base_link",
+          laserScanIn->header.stamp + ros::Duration().fromSec(laserScanIn->ranges.size()*laserScanIn->time_increment),
+          ros::Duration(15.0))) {
+          // ROS_INFO_STREAM("SKIPPED " << laserScanIn->header.seq);
+          return;
+      }
+  } catch(tf::TransformException &ex) {
+          ROS_ERROR("%s", ex.what());
+          ros::Duration(1.0).sleep();
+          return;
+  }
+   
+  sensor_msgs::PointCloud2 cloud;
+  lp.transformLaserScanToPointCloud( "/base_link", *laserScanIn, cloud, *listener_pointer);
+  laserCloudHandler(cloud);
 }
 
 void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
@@ -838,20 +851,20 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 
   tf::Quaternion parsed_orientation = orientation.operator*=(transformation_q);
 
-  geometry_msgs::PoseStamped imuVis;
-  // publish the imu quaternion
-  imuVis.pose.orientation.x = imuIn->orientation.x;
-  imuVis.pose.orientation.y = imuIn->orientation.y;
-  imuVis.pose.orientation.z = imuIn->orientation.z;
-  imuVis.pose.orientation.w = imuIn->orientation.w;
-  imuVis.pose.position.x = 0;
-  imuVis.pose.position.y = 0;
-  imuVis.pose.position.z = 0;
+  // geometry_msgs::PoseStamped imuVis;
+  // // publish the imu quaternion
+  // imuVis.pose.orientation.x = imuIn->orientation.x;
+  // imuVis.pose.orientation.y = imuIn->orientation.y;
+  // imuVis.pose.orientation.z = imuIn->orientation.z;
+  // imuVis.pose.orientation.w = imuIn->orientation.w;
+  // imuVis.pose.position.x = 0;
+  // imuVis.pose.position.y = 0;
+  // imuVis.pose.position.z = 0;
 
   
-  imuVis.header.stamp = imuIn->header.stamp;
-  imuVis.header.frame_id = "/camera_init_2";
-  pubImuVisPointer->publish(imuVis);
+  // imuVis.header.stamp = imuIn->header.stamp;
+  // imuVis.header.frame_id = "/camera_init_2";
+  // pubImuVisPointer->publish(imuVis);
 
   
   tf::Matrix3x3(parsed_orientation).getRPY(roll, pitch, yaw);
@@ -882,26 +895,26 @@ void imuHandler(const sensor_msgs::Imu::ConstPtr& imuIn)
 
 
 ////////////////////////////
-  tf::Quaternion input_quat;
+  // tf::Quaternion input_quat;
 
-  input_quat.setRPY(imuRoll[imuPointerLast] , imuPitch[imuPointerLast] , imuYaw[imuPointerLast] );
+  // input_quat.setRPY(imuRoll[imuPointerLast] , imuPitch[imuPointerLast] , imuYaw[imuPointerLast] );
   
-  // // ROS_INFO_STREAM(  input_quat.w() );
+  // // // ROS_INFO_STREAM(  input_quat.w() );
 
-  geometry_msgs::PoseStamped imuVis2;
-  // publish the imu quaternion
-  imuVis2.pose.orientation.x = input_quat.x();
-  imuVis2.pose.orientation.y = input_quat.y();
-  imuVis2.pose.orientation.z = input_quat.z();
-  imuVis2.pose.orientation.w = input_quat.w();
-  imuVis2.pose.position.x = 0;
-  imuVis2.pose.position.y = 0;
-  imuVis2.pose.position.z = 0;
+  // geometry_msgs::PoseStamped imuVis2;
+  // // publish the imu quaternion
+  // imuVis2.pose.orientation.x = input_quat.x();
+  // imuVis2.pose.orientation.y = input_quat.y();
+  // imuVis2.pose.orientation.z = input_quat.z();
+  // imuVis2.pose.orientation.w = input_quat.w();
+  // imuVis2.pose.position.x = 0;
+  // imuVis2.pose.position.y = 0;
+  // imuVis2.pose.position.z = 0;
 
   
-  imuVis2.header.stamp = imuIn->header.stamp;
-  imuVis2.header.frame_id = "/camera_init_2";
-  pubImuVisPointer2->publish(imuVis2);
+  // imuVis2.header.stamp = imuIn->header.stamp;
+  // imuVis2.header.frame_id = "/camera_init_2";
+  // pubImuVisPointer2->publish(imuVis2);
 
 ////////////////////////////////
 
@@ -918,6 +931,8 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "scanRegistration");
   ros::NodeHandle nh;
 
+  tf::TransformListener listener;
+
   ros::Subscriber subLaserScan = nh.subscribe<sensor_msgs::LaserScan>("/lidar_scan", 4, laserScanHandler);
 
   // ros::Subscriber subLaserCloud = nh.subscribe<sensor_msgs::PointCloud2> 
@@ -927,7 +942,7 @@ int main(int argc, char** argv)
                                   ("/imu/data", 10, imuHandler);
 
   ros::Publisher pubLaserCloudExtreCur = nh.advertise<sensor_msgs::PointCloud2> 
-                                         ("/laser_cloud_extre_cur", 4);
+                                         ("/laser_cloud_extre_cur", 2);
 
   // last registration before the new sweep
   ros::Publisher pubLaserCloudLast = nh.advertise<sensor_msgs::PointCloud2> 
@@ -937,43 +952,45 @@ int main(int argc, char** argv)
   pubLaserCloudLastPointer = &pubLaserCloudLast;
 
   // debug purposes shows the corners and sharp areas of the current sweep of the lidar
-  ros::Publisher pubCornerPointsSharp = nh.advertise<sensor_msgs::PointCloud2> 
-                                        ("/ms_cloud_sharp", 2);
+  // ros::Publisher pubCornerPointsSharp = nh.advertise<sensor_msgs::PointCloud2> 
+  //                                       ("/ms_cloud_sharp", 2);
 
-  ros::Publisher pubCornerPointsLessSharp = nh.advertise<sensor_msgs::PointCloud2> 
-                                            ("/ms_cloud_less_sharp", 2);
+  // ros::Publisher pubCornerPointsLessSharp = nh.advertise<sensor_msgs::PointCloud2> 
+  //                                           ("/ms_cloud_less_sharp", 2);
 
-  ros::Publisher pubSurfPointsFlat = nh.advertise<sensor_msgs::PointCloud2> 
-                                       ("/ms_cloud_flat", 2);
+  // ros::Publisher pubSurfPointsFlat = nh.advertise<sensor_msgs::PointCloud2> 
+  //                                      ("/ms_cloud_flat", 2);
 
-  ros::Publisher pubSurfPointsLessFlat = nh.advertise<sensor_msgs::PointCloud2> 
-                                           ("/ms_cloud_less_flat", 2);
+  // ros::Publisher pubSurfPointsLessFlat = nh.advertise<sensor_msgs::PointCloud2> 
+  //                                          ("/ms_cloud_less_flat", 2);
 
-  ros::Publisher pubImuTrans = nh.advertise<sensor_msgs::PointCloud2> ("/imu_trans", 10);
+  // ros::Publisher pubImuTrans = nh.advertise<sensor_msgs::PointCloud2> ("/imu_trans", 10);
 
   // debug the laser angle
-  ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 1000);
+  // ros::Publisher pubLaserAngle = nh.advertise<std_msgs::Float32>("/laser_angle", 1000);
 
-  ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 20);
+  // ros::Publisher pubFirstPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/first_point", 20);
 
-  ros::Publisher pubLastPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/last_point", 20);
+  // ros::Publisher pubLastPoint = nh.advertise<sensor_msgs::PointCloud2>("/laser/last_point", 20);
 
   // debug imu visualiser
-  ros::Publisher pubImuVis = nh.advertise<geometry_msgs::PoseStamped> 
-                                         ("/imu/q_pose", 20);
-  ros::Publisher pubImuVis2 = nh.advertise<geometry_msgs::PoseStamped> 
-                                         ("/imu/q_pose_2", 20);
+  // ros::Publisher pubImuVis = nh.advertise<geometry_msgs::PoseStamped> 
+  //                                        ("/imu/q_pose", 20);
+  // ros::Publisher pubImuVis2 = nh.advertise<geometry_msgs::PoseStamped> 
+  //                                        ("/imu/q_pose_2", 20);
 
-  pubLaserAnglePointer = &pubLaserAngle;
-  pubCornerPointsSharpPointer = &pubCornerPointsSharp;
-  pubCornerPointsLessSharpPointer = &pubCornerPointsLessSharp;
-  pubSurfPointsFlatPointer = &pubSurfPointsFlat;
-  pubSurfPointsLessFlatPointer = &pubSurfPointsLessFlat;
-  pubImuTransPointer = &pubImuTrans;
-  pubFirstPointPointer = &pubFirstPoint;
-  pubLastPointPointer = &pubLastPoint;
-  pubImuVisPointer = &pubImuVis;
-  pubImuVisPointer2 = &pubImuVis2;
+  // pubLaserAnglePointer = &pubLaserAngle;
+  // pubCornerPointsSharpPointer = &pubCornerPointsSharp;
+  // pubCornerPointsLessSharpPointer = &pubCornerPointsLessSharp;
+  // pubSurfPointsFlatPointer = &pubSurfPointsFlat;
+  // pubSurfPointsLessFlatPointer = &pubSurfPointsLessFlat;
+  // pubImuTransPointer = &pubImuTrans;
+  // pubFirstPointPointer = &pubFirstPoint;
+  // pubLastPointPointer = &pubLastPoint;
+  // pubImuVisPointer = &pubImuVis;
+  // pubImuVisPointer2 = &pubImuVis2;
+
+  listener_pointer = &listener;
 
   ros::spin();
 
